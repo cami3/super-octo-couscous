@@ -56,5 +56,20 @@ if uploaded_file:
     st.plotly_chart(fig, use_container_width=True)
 
     # TABELLA DETTAGLIO
-    st.subheader("Tabella dettagliata")
-    st.dataframe(subset[['data', 'fatturato', 'totale_ingredienti', 'Dipendente', '% ingredienti', '% dipendenti']])
+    # TABELLA DETTAGLIO con evidenziazione soglie
+def highlight_thresholds(val, soglia):
+    try:
+        return 'color: red' if float(val) > soglia else ''
+    except:
+        return ''
+
+df_show = subset[['data', 'fatturato', 'totale_ingredienti', 'Dipendente', '% ingredienti', '% dipendenti']].copy()
+df_show['% ingredienti'] = df_show['% ingredienti'].round(1)
+df_show['% dipendenti'] = df_show['% dipendenti'].round(1)
+
+st.dataframe(
+    df_show.style
+    .format({'% ingredienti': '{:.1f}%', '% dipendenti': '{:.1f}%'})
+    .applymap(lambda v: highlight_thresholds(v, 30), subset=['% ingredienti'])
+    .applymap(lambda v: highlight_thresholds(v, 20), subset=['% dipendenti'])
+)
