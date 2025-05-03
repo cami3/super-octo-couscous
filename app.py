@@ -8,7 +8,7 @@ import io
 st.set_page_config(page_title="Pokè To Go – Dashboard Business", layout="wide")
 
 # Caricamento logo
-logo = Image.open("/mnt/data/logo.png")
+logo = Image.open("logo.png")
 st.image(logo, width=150)
 
 # Stili personalizzati
