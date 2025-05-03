@@ -105,8 +105,8 @@ if uploaded_file:
     st.subheader("🧾 Ingredienti divisi per categoria")
     categorie = {
         "Proteine": ['salmone', 'tonno', 'Tonno Saku', 'Polpo', 'Gamberetti', 'Pollo Nuggets', 'Pollo fette', 'Tofu', 'Uova'],
-        "Frutta/Ortaggi": ['Avocado', 'Avo Hass', 'mango', 'Lime', 'uva', 'Mele', 'melone', 'Kiwi', 'Ananas', 'Anguria', 'carote', 'cetrioli', 'pomodori', 'Cavolo viola', 'zucchine', 'cipolle'],
-        "Condimenti": ['Sesamo nero', 'Sesamo bianco', 'Mandorle', 'nocciole', 'Cipolle croccanti', 'Pistacchio', 'ceci', 'mais'],
+        "Frutta/Ortaggi": ['Avocado', 'Avo Hass', 'mango', 'Lime', 'uva', 'Mele', 'melone', 'Kiwi', 'Ananas', 'Anguria', 'carote', 'cetrioli', 'pomodori', 'Cavolo viola', 'zucchine', 'cipolle', 'ceci', 'mais'],
+        "Condimenti": ['Sesamo nero', 'Sesamo bianco', 'Mandorle', 'nocciole', 'Cipolle croccanti', 'Pistacchio'],
         "Salse/Oli": ['Salsa soya', 'Olio Evo', 'Teriyaki', 'Maionese', 'yogurt', 'Ponzu', 'Sriracha'],
         "Riso/Insalate": ['riso_sushi', 'riso_nero', 'Riso integrale', 'iceberg'],
     }
