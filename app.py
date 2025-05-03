@@ -29,7 +29,6 @@ st.markdown("""
 
 # 🎯 TITOLONE E FILE
 st.title("🍣 Pokeria di Arianna – Cruscotto Business Giornaliero")
-st.download_button("📥 Scarica Analisi in CSV", data=" ", file_name="analisi_pokeria.csv", mime='text/csv')  # Placeholder
 
 uploaded_file = st.file_uploader("⬆️ Carica file CSV", type=["csv"])
 
