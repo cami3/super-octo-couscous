@@ -4,7 +4,7 @@ import plotly.express as px
 from PIL import Image
 from datetime import timedelta
 
-st.set_page_config(page_title="Pokè To Go – Dashboard Business", layout="wide")
+st.set_page_config(page_title="Pokè To Go! – Dashboard Business", layout="wide")
 logo = Image.open("logo.png")
 st.image(logo, width=150)
 st.markdown("""
@@ -14,7 +14,7 @@ h1, h2, h3 { color: #e85d04; }
 .block-container { padding-top: 2rem; }
 </style>
 """, unsafe_allow_html=True)
-st.title("Pokè To Go – Dashboard Operativa 🤰🏻🍣")
+st.title("Pokè To Go – Dashboard Operativa 🍣")
 
 st.markdown("""
 **Le spese distribuite tra approvvigionamenti successivi.**  
@@ -64,15 +64,18 @@ df['extra_totali'] = df[extra_cols].sum(axis=1)
 min_date, max_date = df['data'].min().date(), df['data'].max().date()
 with st.form("date_form"):
     start, end = st.date_input("📅 Intervallo Analisi", [min_date, max_date], min_value=min_date, max_value=max_date)
-    delta_days = st.number_input("📉 Giorni per confronto precedente", min_value=1, max_value=90, value=14)
+    last_year_start = (pd.to_datetime(start) - timedelta(days=365)).date()
+    last_year_end = (pd.to_datetime(end) - timedelta(days=365)).date()
+    prev_start, prev_end = st.date_input("📆 Periodo di Confronto", [last_year_start, last_year_end], min_value=min_date, max_value=max_date)
     submitted = st.form_submit_button("🔍 Analizza")
 
 if not submitted:
     st.stop()
 
 start, end = pd.to_datetime(start), pd.to_datetime(end)
+prev_start, prev_end = pd.to_datetime(prev_start), pd.to_datetime(prev_end)
 df_sel = df[(df['data'] >= start) & (df['data'] <= end)]
-df_prev = df[(df['data'] >= start - timedelta(days=delta_days)) & (df['data'] < start)]
+df_prev = df[(df['data'] >= prev_start) & (df['data'] <= prev_end)]
 
 def total(col, df, average=False):
     if average:
@@ -126,13 +129,13 @@ with tabs[1]:
         'Granelle e Topping': ['Sesamo nero','Sesamo bianco','Mandorle','nocciole','Cipolle croccanti','Pistacchio'],
         'Salse e Condimenti': ['Salsa soya','Olio Evo','Teriyaki','Maionese','yogurt','Ponzu','Sriracha']
     }
+    df_dist['data'] = df['data']
+    df_dist_sel = df_dist[(df_dist['data'] >= start) & (df_dist['data'] <= end)]
     for nome, cols in categorie.items():
         st.markdown(f"**{nome}**")
-        validi = [col for col in cols if col in df_dist.columns]
+        validi = [col for col in cols if col in df_dist_sel.columns]
         if validi:
-            melted = df_dist[validi].copy()
-            melted['data'] = df['data']
-            melted = melted.melt(id_vars='data', var_name='Ingrediente', value_name='Euro')
+            melted = df_dist_sel[['data'] + validi].melt(id_vars='data', var_name='Ingrediente', value_name='Euro')
             st.plotly_chart(px.area(melted, x='data', y='Euro', color='Ingrediente'), use_container_width=True)
 
 with tabs[2]:
@@ -159,7 +162,7 @@ with tabs[4]:
 - **Bibite/Sorbetti**: solo costo, non vendite
 - **Ingredienti**: costo distribuito tra approvvigionamenti
 - % calcolate solo se fatturato > 0
-- Delta confrontano con intervallo precedente definibile
+- Delta confrontano con intervallo precedente definibile (default: stesso periodo anno precedente)
 - Percentuali sono medie giornaliere
 - Categorie ingredienti includono granelle/topping
 """)
