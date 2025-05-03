@@ -7,6 +7,33 @@ st.title("Pokeria - Analisi Vendite, Costi e KPI")
 
 uploaded_file = st.file_uploader("Carica file CSV", type=["csv"])
 
+st.markdown("""
+## Guida alla Lettura Dati
+
+Questa dashboard analizza vendite e costi stimati della Pokeria su base giornaliera.
+
+**Fonte dei dati**: file CSV con fatturato, acquisti, personale, quantità vendute.
+
+### Logica di calcolo
+
+- **Costi ingredienti**: distribuiti tra due acquisti successivi, proporzionalmente nel tempo (simulano consumo + scadenza)
+- **% Ingredienti / % Dipendenti**: indicano l’incidenza dei costi giornalieri sul fatturato
+- **Utile stimato**: differenza tra fatturato e costi stimati
+- **KPI per poke**: ricavo medio, extra per 10 poke, costo medio stimato
+
+### Soglie di attenzione
+
+- **% Ingredienti > 35%**: rischio inefficienza o spreco
+- **% Dipendenti > 25%**: rischio squilibrio organico
+- **Fatturato < €300**: giornata critica
+
+### Esportazione
+
+È possibile scaricare l’intero periodo filtrato in CSV per condivisione o archiviazione.
+
+---
+""")
+
 if uploaded_file:
     df = pd.read_csv(uploaded_file, sep=';')
     df = df.dropna(how='all')
