@@ -10,7 +10,7 @@ st.set_page_config(page_title="Pokè To Go – Dashboard Business", layout="wide
 logo = Image.open("logo.png")
 st.image(logo, width=150)
 
-# CSS
+# CSS brand-based
 st.markdown("""
     <style>
     .main {
@@ -33,9 +33,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-colori_brand = ['#e85d04', '#0077b6', '#fdfcfb', '#ffffff']
-
-# 🎯 TITOLONE
+# 🌟 TITOLO
 st.title("🍣 Pokè To Go – Dashboard Operativa")
 
 uploaded_file = st.file_uploader("⬆️ Carica file CSV", type=["csv"])
@@ -80,7 +78,7 @@ if uploaded_file:
     df['% dipendenti'] = (df['Dipendente'] / df['fatturato']) * 100
 
     min_date, max_date = df['data'].min(), df['data'].max()
-    inizio, fine = st.date_input("📅 Intervallo Analisi", [min_date, max_date], min_value=min_date, max_value=max_date)
+    inizio, fine = st.date_input("🗓️ Intervallo Analisi", [min_date, max_date], min_value=min_date, max_value=max_date)
     df = df[(df['data'] >= pd.to_datetime(inizio)) & (df['data'] <= pd.to_datetime(fine))]
 
     poke_cols = ['poke_reglular', 'poke_maxi', 'poke_baby']
@@ -88,8 +86,7 @@ if uploaded_file:
     df['poke_totali'] = df[poke_cols].sum(axis=1)
     df['extra_totali'] = df[extra_cols].sum(axis=1)
 
-    # 📊 TABS
-    tab1, tab2, tab3, tab4 = st.tabs(["📌 Metriche", "🍱 Vendite", "🥤 Bevande & Sorbetti", "📆 Storico"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📌 Metriche", "🍱 Vendite", "🥤 Bevande & Sorbetti", "🗓️ Storico"])
 
     with tab1:
         st.header("📌 Metriche Totali – Performance del periodo")
@@ -120,27 +117,27 @@ if uploaded_file:
     with tab2:
         st.header("🍱 Vendite – Poke e Bowl")
         poke_melt = df[['data'] + poke_cols + ['fruit_bowl']].melt(id_vars='data', var_name='tipo', value_name='quantità')
-        fig = px.line(poke_melt, x='data', y='quantità', color='tipo', markers=True, color_discrete_sequence=colori_brand)
+        fig = px.line(poke_melt, x='data', y='quantità', color='tipo', markers=True)
         st.plotly_chart(fig, use_container_width=True)
 
         st.header("🥑 Extra più richiesti")
         extra_melt = df[['data'] + extra_cols].melt(id_vars='data', var_name='extra', value_name='pezzi')
-        fig2 = px.area(extra_melt, x='data', y='pezzi', color='extra', color_discrete_sequence=colori_brand)
+        fig2 = px.area(extra_melt, x='data', y='pezzi', color='extra')
         st.plotly_chart(fig2, use_container_width=True)
 
     with tab3:
         st.header("🥤 Bevande")
         bibite_melt = df[['data'] + bibite].melt(id_vars='data', var_name='bevanda', value_name='pezzi')
-        fig3 = px.bar(bibite_melt, x='data', y='pezzi', color='bevanda', color_discrete_sequence=colori_brand)
+        fig3 = px.bar(bibite_melt, x='data', y='pezzi', color='bevanda')
         st.plotly_chart(fig3, use_container_width=True)
 
         st.header("🍧 Sorbetti")
         sorbetti_melt = df[['data'] + sorbetti].melt(id_vars='data', var_name='gusto', value_name='pezzi')
-        fig4 = px.bar(sorbetti_melt, x='data', y='pezzi', color='gusto', color_discrete_sequence=colori_brand)
+        fig4 = px.bar(sorbetti_melt, x='data', y='pezzi', color='gusto')
         st.plotly_chart(fig4, use_container_width=True)
 
     with tab4:
-        st.header("🧾 Ingredienti per Categoria")
+        st.header("📜 Ingredienti per Categoria")
         categorie = {
             "Proteine": ['salmone', 'tonno', 'Tonno Saku', 'Polpo', 'Gamberetti', 'Pollo Nuggets', 'Pollo fette', 'Tofu', 'Uova'],
             "Frutta/Ortaggi": ['Avocado', 'Avo Hass', 'mango', 'Lime', 'uva', 'Mele', 'melone', 'Kiwi', 'Ananas', 'Anguria', 'carote', 'cetrioli', 'pomodori', 'Cavolo viola', 'zucchine', 'cipolle', 'ceci', 'mais'],
@@ -153,10 +150,10 @@ if uploaded_file:
             validi = [col for col in cols if col in df.columns]
             if validi:
                 melted = df[['data'] + validi].melt(id_vars='data', var_name='ingrediente', value_name='euro')
-                fig = px.area(melted, x='data', y='euro', color='ingrediente', color_discrete_sequence=colori_brand)
+                fig = px.area(melted, x='data', y='euro', color='ingrediente')
                 st.plotly_chart(fig, use_container_width=True)
 
-        st.header("📆 Confronto Annuale – Costi e Ricavi")
+        st.header("🗓️ Confronto Annuale – Costi e Ricavi")
         df['anno'] = df['data'].dt.year
         ann = df.groupby('anno').agg({'fatturato': 'sum', 'totale_ingredienti': 'sum', 'Dipendente': 'sum'}).reset_index()
         ann['% ingredienti'] = ann['totale_ingredienti'] / ann['fatturato'] * 100
@@ -166,4 +163,4 @@ if uploaded_file:
             '% ingredienti': '{:.1f}%', '% dipendenti': '{:.1f}%'
         }))
 
-    st.download_button("📥 Scarica Analisi in CSV", data=df.to_csv(index=False).encode('utf-8'), file_name="analisi_poketogo.csv", mime='text/csv')
+    st.download_button("📅 Scarica Analisi in CSV", data=df.to_csv(index=False).encode('utf-8'), file_name="analisi_poketogo.csv", mime='text/csv')
