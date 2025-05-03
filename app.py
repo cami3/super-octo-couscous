@@ -44,17 +44,17 @@ exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['d
 ingred_cols = [c for c in df.columns if c not in exclude]
 
 # Distribuzione costi ingredienti
- df_dist = pd.DataFrame(index=df.index)
- for ing in ingred_cols:
-     s = df[['data', ing]].dropna()
-     s = s[s[ing] > 0].sort_values('data')
-     arr = pd.Series(0, index=df.index)
-     for i in range(len(s) - 1):
-         a, b = s.iloc[i]['data'], s.iloc[i+1]['data']
-         days = (b - a).days
-         if days > 0:
-             arr[(df['data'] >= a) & (df['data'] < b)] += s.iloc[i][ing] / days
-     df_dist[ing] = arr
+df_dist = pd.DataFrame(index=df.index)
+for ing in ingred_cols:
+ s = df[['data', ing]].dropna()
+ s = s[s[ing] > 0].sort_values('data')
+ arr = pd.Series(0, index=df.index)
+ for i in range(len(s) - 1):
+     a, b = s.iloc[i]['data'], s.iloc[i+1]['data']
+     days = (b - a).days
+     if days > 0:
+         arr[(df['data'] >= a) & (df['data'] < b)] += s.iloc[i][ing] / days
+ df_dist[ing] = arr
 
 # Calcolo metriche
 
