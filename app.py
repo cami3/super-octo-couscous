@@ -4,7 +4,7 @@ import plotly.express as px
 from PIL import Image
 
 st.set_page_config(page_title="Pokè To Go – Dashboard Business", layout="wide")
-logo = Image.open("/mnt/data/logo.png")
+logo = Image.open("logo.png")
 st.image(logo, width=150)
 st.markdown("""
 <style>
