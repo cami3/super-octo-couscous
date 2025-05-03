@@ -5,6 +5,11 @@ import plotly.express as px
 # 🌈 STYLE & THEME
 st.set_page_config(page_title="Pokeria – Dashboard Business Arianna", layout="wide")
 
+from PIL import Image
+
+logo = Image.open("logo.png")
+st.image(logo, width=150)
+
 st.markdown("""
     <style>
     .main {
@@ -27,8 +32,9 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+
 # 🎯 TITOLONE E FILE
-st.title("🍣 Pokè to Go – Dashboard Operativa")
+st.title("🍣 Pokè To Go – Dashboard Operativa")
 
 #st.download_button("📥 Scarica Analisi in CSV", data=" ", file_name="analisi_pokeria.csv", mime='text/csv')  # Placeholder
 
