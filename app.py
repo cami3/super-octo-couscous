@@ -13,7 +13,7 @@ h1, h2, h3 { color: #e85d04; }
 .block-container { padding-top: 2rem; }
 </style>
 """, unsafe_allow_html=True)
-st.title("Pokè To Go – Dashboard Operativa 🤰🏻🍣")
+st.title("Pokè To Go – Dashboard Operativa 🍣")
 
 st.markdown("""
 **Le spese distribuite tra approvvigionamenti successivi.**  
@@ -66,28 +66,30 @@ df_sel = df[(df['data'] >= start) & (df['data'] <= end)]
 delta = end - start
 df_prev = df[(df['data'] >= start - delta) & (df['data'] < start)]
 
-def total(col, df):
+def total(col, df, average=False):
+    if average:
+        return df[col].mean() if len(df) > 0 else 0
     return df[col].sum() if col in df.columns else df[col].sum(axis=1).sum()
 
 metriche = [
-    ("🍣 Fatturato", 'fatturato', '€'),
-    ("💰 Utile stimato", None, '€'),
-    ("🧂 % Ingredienti", '% ingredienti', '%'),
-    ("👥 % Dipendenti", '% dipendenti', '%'),
-    ("🍱 Poke totali", 'poke_totali', ''),
-    ("🍓 Extra totali (€)", 'extra_totali', '€')
+    ("🍣 Fatturato", 'fatturato', '€', False),
+    ("💰 Utile stimato", None, '€', False),
+    ("🧂 % Ingredienti", '% ingredienti', '%', True),
+    ("👥 % Dipendenti", '% dipendenti', '%', True),
+    ("🍱 Poke totali", 'poke_totali', '', False),
+    ("🍓 Extra totali (€)", 'extra_totali', '€', False)
 ]
 
 colonne = st.columns(len(metriche))
-for i, (label, key, unit) in enumerate(metriche):
+for i, (label, key, unit, avg) in enumerate(metriche):
     if key:
-        cur = total(key, df_sel)
-        prev = total(key, df_prev)
+        cur = total(key, df_sel, average=avg)
+        prev = total(key, df_prev, average=avg)
     else:
         cur = df_sel['fatturato'].sum() - df_sel['totale_ingredienti'].sum() - df_sel['Dipendente'].sum()
         prev = df_prev['fatturato'].sum() - df_prev['totale_ingredienti'].sum() - df_prev['Dipendente'].sum()
     delta_val = cur - prev
-    colonne[i].metric(label, f"{unit}{cur:,.1f}", delta=f"{unit}{delta_val:,.1f}")
+    colonne[i].metric(label, f"{unit}{cur:,.1f}", delta=f"{unit}{delta_val:,.1f}" if delta_val != 0 else None)
 
 crit = df_sel[(df_sel['fatturato']<300) | (df_sel['% ingredienti']>35) | (df_sel['% dipendenti']>25)]
 if len(crit) > 3:
@@ -96,7 +98,7 @@ if len(crit) > 3:
 st.subheader("📋 Tabella giornaliera")
 st.dataframe(df_sel[['data','fatturato','totale_ingredienti','% ingredienti','Dipendente','% dipendenti','poke_totali','extra_totali'] + poke_cols + extra_cols])
 
-tabs = st.tabs(["📈 Vendite","🍱 Ingredienti","🥤 Bevande&Sorbetti","ℹ️ Aiuto"])
+tabs = st.tabs(["📈 Vendite","🍱 Ingredienti","🥤 Bevande&Sorbetti","📊 Confronto Annuale","ℹ️ Aiuto"])
 
 with tabs[0]:
     st.subheader("Vendite (pezzi)")
@@ -125,6 +127,17 @@ with tabs[2]:
     st.plotly_chart(px.bar(melt_bs, x='data', y='Euro', color='Prodotto'), use_container_width=True)
 
 with tabs[3]:
+    st.subheader("Confronto Annuale – Costi e Ricavi")
+    df['anno'] = df['data'].dt.year
+    ann = df.groupby('anno').agg({'fatturato': 'sum', 'totale_ingredienti': 'sum', 'Dipendente': 'sum'}).reset_index()
+    ann['% ingredienti'] = ann.apply(lambda r: safe_pct(r['totale_ingredienti'], r['fatturato']), axis=1)
+    ann['% dipendenti'] = ann.apply(lambda r: safe_pct(r['Dipendente'], r['fatturato']), axis=1)
+    st.dataframe(ann.style.format({
+        'fatturato': '€{:.2f}', 'totale_ingredienti': '€{:.2f}', 'Dipendente': '€{:.2f}',
+        '% ingredienti': '{:.1f}%', '% dipendenti': '{:.1f}%'
+    }))
+
+with tabs[4]:
     st.header("ℹ️ Note Metodi")
     st.markdown("""
 - **Poke**: quantità in pezzi
@@ -132,6 +145,8 @@ with tabs[3]:
 - **Bibite/Sorbetti**: solo costo, non vendite
 - **Ingredienti**: costo distribuito tra approvvigionamenti
 - % calcolate solo se fatturato > 0
+- Delta confrontano con stesso intervallo precedente
+- Percentuali sono medie giornaliere
 """)
 
 csv = df_sel.to_csv(index=False).encode('utf-8')
