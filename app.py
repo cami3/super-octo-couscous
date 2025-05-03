@@ -72,7 +72,7 @@ df['mese'] = df['data'].dt.to_period('M').astype(str)
 start, end = st.date_input("📅 Intervallo Analisi", [df['data'].min(), df['data'].max()])
 df_sel = df[(df['data'] >= start) & (df['data'] <= end)]
 # Selezione periodo precedente
- delta = end - start
+delta = end - start
 df_prev = df[(df['data'] >= start - delta) & (df['data'] < start)]
 
 # Calcolo valori attuali e delta
