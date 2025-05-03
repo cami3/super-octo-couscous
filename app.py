@@ -31,10 +31,10 @@ for col in df.columns:
     if col != 'data':
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
-poke_cols = ['poke_reglular','poke_maxi','poke_baby','fruit_bowl']  # quantità
-extra_cols = ['Avocado_venduto','Feta_venduto','Philad_venduto','Gomawak_venduto']  # vendite €
-bibite_cols = ['Acqua nat','Acqua gas','Coca cola','Coca zero','corona','ichnusa','fanta','Estathe limone','Estathe pesca']  # costi
-sorbetti_cols = ['Sorbetto limone','Sorbetto mela','Sorbetto mango']  # costi
+poke_cols = ['poke_reglular','poke_maxi','poke_baby','fruit_bowl']
+extra_cols = ['Avocado_venduto','Feta_venduto','Philad_venduto','Gomawak_venduto']
+bibite_cols = ['Acqua nat','Acqua gas','Coca cola','Coca zero','corona','ichnusa','fanta','Estathe limone','Estathe pesca']
+sorbetti_cols = ['Sorbetto limone','Sorbetto mela','Sorbetto mango']
 cost_cols = ['Dipendente']
 exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data','fatturato']
 ingred_cols = [c for c in df.columns if c not in exclude]
@@ -51,7 +51,6 @@ for ing in ingred_cols:
             arr[(df['data'] >= a) & (df['data'] < b)] += s.iloc[i][ing] / days
     df_dist[ing] = arr
 
-
 def safe_pct(cost, rev):
     return cost/rev*100 if rev>0 else 0
 
@@ -66,7 +65,6 @@ start, end = pd.to_datetime(start), pd.to_datetime(end)
 df_sel = df[(df['data'] >= start) & (df['data'] <= end)]
 delta = end - start
 df_prev = df[(df['data'] >= start - delta) & (df['data'] < start)]
-
 
 def total(col, df):
     return df[col].sum() if col in df.columns else df[col].sum(axis=1).sum()
@@ -95,7 +93,10 @@ crit = df_sel[(df_sel['fatturato']<300) | (df_sel['% ingredienti']>35) | (df_sel
 if len(crit) > 3:
     st.warning(f"⚠️ {len(crit)} giornate critiche nel periodo selezionato.")
 
-tabs = st.tabs(["📈 Vendite","🍱 Ingredienti","🥤 Bevande&Sorbetti","📆 Storico","ℹ️ Aiuto"])
+st.subheader("📋 Tabella giornaliera")
+st.dataframe(df_sel[['data','fatturato','totale_ingredienti','% ingredienti','Dipendente','% dipendenti','poke_totali','extra_totali'] + poke_cols + extra_cols])
+
+tabs = st.tabs(["📈 Vendite","🍱 Ingredienti","🥤 Bevande&Sorbetti","ℹ️ Aiuto"])
 
 with tabs[0]:
     st.subheader("Vendite (pezzi)")
@@ -124,12 +125,6 @@ with tabs[2]:
     st.plotly_chart(px.bar(melt_bs, x='data', y='Euro', color='Prodotto'), use_container_width=True)
 
 with tabs[3]:
-    st.subheader("Trend Storico Fatturato")
-    idx = df_sel.set_index('data')
-    for freq, label in [('D','Giornaliero'),('W','Settimanale'),('M','Mensile'),('Y','Annuale')]:
-        st.line_chart(idx['fatturato'].resample(freq).sum(), use_container_width=True, key=label)
-
-with tabs[4]:
     st.header("ℹ️ Note Metodi")
     st.markdown("""
 - **Poke**: quantità in pezzi
