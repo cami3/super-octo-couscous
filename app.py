@@ -25,9 +25,9 @@ if uploaded_file:
     df['totale_ingredienti'] = df[ingredienti].sum(axis=1)
     df['% ingredienti'] = (df['totale_ingredienti'] / df['fatturato']) * 100
     df['% dipendenti'] = (df['Dipendente'] / df['fatturato']) * 100
-    df['mese'] = df['data'].dt.to_period('M')
+    df['mese'] = df['data'].dt.to_period('M').astype(str)
+    df['settimana'] = df['data'].dt.to_period('W').astype(str)
     df['anno'] = df['data'].dt.year
-    df['settimana'] = df['data'].dt.to_period('W')
 
     st.sidebar.subheader("Filtra per intervallo di date")
     inizio, fine = st.sidebar.date_input("Intervallo", [df['data'].min(), df['data'].max()])
@@ -76,6 +76,6 @@ if uploaded_file:
     annuale['% dipendenti'] = (annuale['Dipendente'] / annuale['fatturato']) * 100
     st.dataframe(annuale.style.format({'% ingredienti': '{:.1f}%', '% dipendenti': '{:.1f}%', 'fatturato': '€{:.2f}', 'totale_ingredienti': '€{:.2f}', 'Dipendente': '€{:.2f}'}))
 
-    st.subheader("Tabella giornaliera (per dettaglio, non per confronto)")
+    st.subheader("Tabella giornaliera (per dettaglio, non confronto)")
     tab = subset[['data', 'fatturato', 'totale_ingredienti', 'Dipendente']].copy()
     st.dataframe(tab.style.format({'fatturato': '€{:.2f}', 'totale_ingredienti': '€{:.2f}', 'Dipendente': '€{:.2f}'}))
