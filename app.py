@@ -3,106 +3,105 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# CONFIGURAZIONE STILE VISIVO
-st.set_page_config(page_title="Pokeria Arianna – Dashboard Visiva", layout="wide")
+st.set_page_config(page_title="Pokeria - Analisi Visiva", layout="wide")
 
-# HEADER CON STILE AMPIO E CHIARO
-st.title("🌸 Pokeria – Analisi Visiva e KPI Giornalieri")
-st.markdown("""
-<div style='padding: 1rem; background-color: #fef6fa; border-radius: 10px;'>
-<h4 style='color: #4b2e83;'>Guida visiva</h4>
-<ul>
-    <li>🌈 <b>Pattern all-over</b> = continuità, coerenza, equilibrio visivo</li>
-    <li>🍱 <b>Poke venduti</b>: osserva il ritmo e la varietà</li>
-    <li>🥑 <b>Extra ingredienti</b>: segnali di personalizzazione efficace</li>
-    <li>💸 <b>Costi e %</b>: sotto soglia = gestione attenta</li>
-</ul>
-</div>
-""", unsafe_allow_html=True)
+st.title("Pokeria - Analisi Visiva e KPI Operativi")
 
-# CARICAMENTO DATI
-uploaded_file = st.file_uploader("Carica il file CSV giornaliero", type=["csv"])
-if uploaded_file:
-    df = pd.read_csv(uploaded_file, sep=';')
-    df = df.dropna(how='all')
-    df['data'] = pd.to_datetime(df['data'], dayfirst=True, errors='coerce')
-    df = df.dropna(subset=['data'])
+uploaded_file = st.file_uploader("Carica file CSV", type=["csv"])
+if not uploaded_file:
+    st.stop()
 
-    for col in df.columns:
-        if col != 'data':
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+df = pd.read_csv(uploaded_file, sep=';')
+df = df.dropna(how='all')
 
-    # Estrai colonne chiave
-    vendite_poke = ['poke_regular', 'poke_maxi', 'poke_baby', 'fruit_bowl']
-    extra = ['Avocado_venduto', 'Feta_venduto', 'Philad_venduto', 'Gomawak_venduto']
-    exclude = ['data', 'Dipendente', 'fatturato'] + vendite_poke + extra
-    ingredienti = [col for col in df.columns if col not in exclude]
+# Parse date
+df['data'] = pd.to_datetime(df['data'], dayfirst=True, errors='coerce')
+df = df.dropna(subset=['data'])
 
-    # Calcoli base
-    df['totale_ingredienti'] = df[ingredienti].sum(axis=1)
-    df['% ingredienti'] = (df['totale_ingredienti'] / df['fatturato']) * 100
-    df['% dipendenti'] = (df['Dipendente'] / df['fatturato']) * 100
-    df = df.sort_values('data')
+# Conversione numerica
+for col in df.columns:
+    if col != 'data':
+        df[col] = pd.to_numeric(df[col], errors='coerce')
 
-    min_date = df['data'].min()
-    max_date = df['data'].max()
-    inizio, fine = st.date_input("Seleziona intervallo", [min_date, max_date])
-    mask = (df['data'] >= pd.to_datetime(inizio)) & (df['data'] <= pd.to_datetime(fine))
-    subset = df[mask]
+df = df.sort_values("data")
 
-    # METRICHE TOTALI
-    st.subheader("✨ Metriche Chiave")
-    ricavi = subset['fatturato'].sum()
-    spesa_ingredienti = subset['totale_ingredienti'].sum()
-    spesa_dipendenti = subset['Dipendente'].sum()
-    utile = ricavi - spesa_ingredienti - spesa_dipendenti
-    totale_poke = subset[vendite_poke].sum().sum()
-    extra_per_10_poke = subset[extra].sum().sum() / (totale_poke / 10) if totale_poke else 0
-    costo_per_poke = spesa_ingredienti / totale_poke if totale_poke else 0
-    ricavo_per_poke = ricavi / totale_poke if totale_poke else 0
+# Intervallo selezionabile
+min_date, max_date = df['data'].min(), df['data'].max()
+inizio, fine = st.date_input("Intervallo Analisi", [min_date, max_date], min_value=min_date, max_value=max_date)
+mask = (df['data'] >= pd.to_datetime(inizio)) & (df['data'] <= pd.to_datetime(fine))
+subset = df[mask]
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Fatturato", f"€ {ricavi:,.2f}")
-    col2.metric("Ingredienti", f"€ {spesa_ingredienti:,.2f}")
-    col3.metric("Dipendenti", f"€ {spesa_dipendenti:,.2f}")
-    col4.metric("Utile stimato", f"€ {utile:,.2f}")
+# Colonne utili
+vendite_poke = ['poke_reglular', 'poke_maxi', 'poke_baby', 'fruit_bowl']
+extra = ['Avocado_venduto', 'Feta_venduto', 'Philad_venduto', 'Gomawak_venduto']
+bibite = ['Acqua nat', 'Acqua gas', 'Coca cola', 'Coca zero', 'corona', 'ichnusa', 'fanta', 'Estathe limone', 'Estathe pesca']
+sorbetti = ['Sorbetto limone', 'Sorbetto mela', 'Sorbetto mango']
 
-    col5, col6, col7 = st.columns(3)
-    col5.metric("Ricavo Medio per Poke", f"€ {ricavo_per_poke:.2f}")
-    col6.metric("Extra ogni 10 poke", f"{extra_per_10_poke:.1f}")
-    col7.metric("Costo Ingredienti per Poke", f"€ {costo_per_poke:.2f}")
+ingredienti_esclusi = vendite_poke + extra + ['Dipendente', 'fatturato', 'data']
+ingredienti = [col for col in df.columns if col not in ingredienti_esclusi]
 
-    # GIORNATE CRITICHE
-    st.subheader("🚨 Giornate Critiche")
-    critiche = subset[
-        (subset['% ingredienti'] > 35) |
-        (subset['% dipendenti'] > 25) |
-        (subset['fatturato'] < 300)
-    ][['data', 'fatturato', '% ingredienti', '% dipendenti']]
-    st.dataframe(critiche)
+# Calcoli
+df['totale_ingredienti'] = df[ingredienti].sum(axis=1)
+df['% ingredienti'] = (df['totale_ingredienti'] / df['fatturato']) * 100
+df['% dipendenti'] = (df['Dipendente'] / df['fatturato']) * 100
 
-    # VENDITE VISIVE
-    st.subheader("📊 Vendite Poke e Bowl")
-    poke_df = subset[['data'] + vendite_poke].melt(id_vars='data', var_name='tipo', value_name='quantità')
-    fig1 = px.line(poke_df, x='data', y='quantità', color='tipo')
-    st.plotly_chart(fig1, use_container_width=True)
+ricavi = subset['fatturato'].sum()
+spesa_ingredienti = subset['totale_ingredienti'].sum()
+spesa_dipendenti = subset['Dipendente'].sum()
+utile = ricavi - spesa_ingredienti - spesa_dipendenti
+totale_poke = subset[vendite_poke].sum().sum()
+extra_totali = subset[extra].sum().sum()
+costo_per_poke = spesa_ingredienti / totale_poke if totale_poke else 0
+ricavo_per_poke = ricavi / totale_poke if totale_poke else 0
 
-    st.subheader("🧁 Extra Ingredienti Venduti")
-    extra_df = subset[['data'] + extra].melt(id_vars='data', var_name='extra', value_name='pezzi')
-    fig2 = px.area(extra_df, x='data', y='pezzi', color='extra', groupnorm='')
-    st.plotly_chart(fig2, use_container_width=True)
+# Documentazione
+with st.expander("📘 Guida alla Lettura Dati"):
+    st.markdown("""
+    - I costi ingredienti sono stimati distribuendo gli acquisti nei giorni tra un acquisto e il successivo.
+    - I KPI includono ricavo medio per poke e numero medio di extra ogni 10 poke.
+    - Le giornate critiche sono quelle con percentuali oltre soglia o ricavi < €300.
+    """)
 
-    # CONFRONTO ANNUALE
-    st.subheader("📆 Confronto Annuale")
-    df['anno'] = df['data'].dt.year
-    confronto = df.groupby('anno').agg({
-        'fatturato': 'sum',
-        'totale_ingredienti': 'sum',
-        'Dipendente': 'sum'
-    }).reset_index()
-    confronto['% ingredienti'] = (confronto['totale_ingredienti'] / confronto['fatturato']) * 100
-    confronto['% dipendenti'] = (confronto['Dipendente'] / confronto['fatturato']) * 100
-    st.dataframe(confronto)
+# Metriche principali
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Fatturato", f"€ {ricavi:,.2f}")
+col2.metric("Ingredienti stimati", f"€ {spesa_ingredienti:,.2f}")
+col3.metric("Dipendenti", f"€ {spesa_dipendenti:,.2f}")
+col4.metric("Utile stimato", f"€ {utile:,.2f}")
 
-    # ESPORTAZIONE
-    st.download_button("📥 Scarica il CSV filtrato", subset.to_csv(index=False).encode('utf-8'), "dati_filtrati.csv", "text/csv")
+st.subheader("KPI Operativi")
+col5, col6, col7 = st.columns(3)
+col5.metric("Ricavo Medio per Poke", f"€ {ricavo_per_poke:.2f}")
+col6.metric("Extra per 10 Poke", f"{extra_totali / (totale_poke / 10):.1f}" if totale_poke else "0")
+col7.metric("Costo Ingredienti per Poke", f"€ {costo_per_poke:.2f}")
+
+# Giornate critiche
+st.subheader("📛 Giornate Critiche")
+critiche = subset[
+    (df['% ingredienti'] > 35) | (df['% dipendenti'] > 25) | (df['fatturato'] < 300)
+][['data', 'fatturato', '% ingredienti', '% dipendenti']]
+st.dataframe(critiche)
+
+# Vendite poke
+st.subheader("📈 Vendite Poke e Bowl")
+df_melt_poke = subset.melt(id_vars='data', value_vars=vendite_poke, var_name='tipo', value_name='quantità')
+fig1 = px.line(df_melt_poke, x='data', y='quantità', color='tipo')
+st.plotly_chart(fig1, use_container_width=True)
+
+# Extra venduti
+st.subheader("🍥 Extra Venduti")
+df_melt_extra = subset.melt(id_vars='data', value_vars=extra, var_name='extra', value_name='pezzi')
+fig2 = px.area(df_melt_extra, x='data', y='pezzi', color='extra', groupnorm='')
+st.plotly_chart(fig2, use_container_width=True)
+
+# Bevande
+st.subheader("🥤 Bevande")
+df_bibite = subset.melt(id_vars='data', value_vars=bibite, var_name='bevanda', value_name='unità')
+fig3 = px.line(df_bibite, x='data', y='unità', color='bevanda')
+st.plotly_chart(fig3, use_container_width=True)
+
+# Sorbetti
+st.subheader("🍧 Sorbetti")
+df_sorbetti = subset.melt(id_vars='data', value_vars=sorbetti, var_name='gusto', value_name='pezzi')
+fig4 = px.bar(df_sorbetti, x='data', y='pezzi', color='gusto')
+st.plotly_chart(fig4, use_container_width=True)
