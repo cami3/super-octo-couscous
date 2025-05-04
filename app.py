@@ -9,28 +9,15 @@ st.image(Image.open("logo.png"), width=150)
 
 st.markdown("""
     <style>
-    .main {
-        background-color: #fdfcfb;
-    }
-    h1, h2, h3 {
-        color: #e85d04;
-    }
-    .stMetric {
-        background-color: #fff7ed;
-        border-radius: 10px;
-        padding: 10px !important;
-    }
-    .block-container {
-        padding-top: 2rem;
-    }
-    .stDataFrame {
-        background-color: white;
-    }
+    .main { background-color: #fdfcfb; }
+    h1, h2, h3 { color: #e85d04; }
+    .stMetric { background-color: #fff7ed; border-radius: 10px; padding: 10px !important; }
+    .block-container { padding-top: 2rem; }
+    .stDataFrame { background-color: white; }
     </style>
 """, unsafe_allow_html=True)
-st.title("Pokè To Go! – Dashboard Operativa 🍣")
 
-# INTRO
+st.title("Pokè To Go! – Dashboard Operativa 🍣")
 st.markdown("""
 **Le spese sono distribuite nel tempo tra due approvvigionamenti successivi.**  
 **Le giornate critiche segnalano margini ridotti o ricavi bassi.**
@@ -42,17 +29,17 @@ if not uploaded:
 
 df = pd.read_csv(uploaded, sep=';').dropna(how='all')
 df['data'] = pd.to_datetime(df['data'], dayfirst=True, errors='coerce')
-df = df.dropna(subset=['data','fatturato'])
+df = df.dropna(subset=['data', 'fatturato'])
 for col in df.columns:
     if col != 'data':
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
-poke_cols = ['poke_reglular','poke_maxi','poke_baby','fruit_bowl']
-extra_cols = ['Avocado_venduto','Feta_venduto','Philad_venduto','Gomawak_venduto']
-bibite_cols = ['Acqua nat','Acqua gas','Coca cola','Coca zero','corona','ichnusa','fanta','Estathe limone','Estathe pesca']
-sorbetti_cols = ['Sorbetto limone','Sorbetto mela','Sorbetto mango']
+poke_cols = ['poke_reglular', 'poke_maxi', 'poke_baby', 'fruit_bowl']
+extra_cols = ['Avocado_venduto', 'Feta_venduto', 'Philad_venduto', 'Gomawak_venduto']
+bibite_cols = ['Acqua nat', 'Acqua gas', 'Coca cola', 'Coca zero', 'corona', 'ichnusa', 'fanta', 'Estathe limone', 'Estathe pesca']
+sorbetti_cols = ['Sorbetto limone', 'Sorbetto mela', 'Sorbetto mango']
 cost_cols = ['Dipendente']
-exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data','fatturato']
+exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data', 'fatturato']
 ingred_cols = [c for c in df.columns if c not in exclude]
 
 df_dist = pd.DataFrame(index=df.index)
@@ -80,7 +67,6 @@ min_date, max_date = df['data'].min().date(), df['data'].max().date()
 with st.form("date_form"):
     start, end = st.date_input("📅 Intervallo Analisi", [min_date, max_date], min_value=min_date, max_value=max_date)
     submitted = st.form_submit_button("🔍 Analizza")
-
 if not submitted:
     st.stop()
 
@@ -124,13 +110,11 @@ if len(critici) > 3:
 else:
     st.success("✅ Buona tenuta del periodo.")
 
-# BOX MIGLIORAMENTO
 if perc >= 30 or utile <= 0:
     st.error("🧯 Da migliorare: costi troppo alti o utile insufficiente.")
 else:
     st.success("🌟 Stai mantenendo una buona efficienza operativa!")
 
-# TABS
 tabs = st.tabs(["📈 Vendite", "🍱 Extra", "🍚 Ingredienti", "📊 Confronto Annuale", "ℹ️ Aiuto"])
 
 with tabs[0]:
@@ -164,8 +148,8 @@ with tabs[3]:
     st.header("📊 Confronto Annuale – Costi e Ricavi")
     df['anno'] = df['data'].dt.year
     ann = df.groupby('anno').agg({
-        'fatturato': 'sum', 
-        'totale_ingredienti': 'sum', 
+        'fatturato': 'sum',
+        'totale_ingredienti': 'sum',
         'Dipendente': 'sum'
     }).reset_index()
     ann['% ingredienti'] = ann.apply(lambda r: safe_pct(r['totale_ingredienti'], r['fatturato']), axis=1)
@@ -188,6 +172,4 @@ with tabs[4]:
 - I delta sono confronti con lo stesso periodo dell’anno precedente.
 """)
 
-# ESPORTAZIONE SOLO DOPO TUTTO
-csv = df_sel.to_csv(index=False).encode('utf-8')
-st.download_button("📥 Scarica Analisi CSV", data=csv, file_name="analisi_poketogo.csv", mime='text/csv')
+st.download_button("📥 Scarica Analisi CSV", data=df_sel.to_csv(index=False).encode('utf-8'), file_name="analisi_poketogo.csv", mime='text/csv')
