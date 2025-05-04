@@ -31,7 +31,8 @@ if not uploaded:
     st.stop()
 
 df = pd.read_csv(uploaded, sep=';').dropna(how='all')
-df['data'] = pd.to_datetime(df['data'], dayfirst=True, errors='coerce')
+df['data'] = pd.to_datetime(df['data'], format='%d/%m/%Y', errors='coerce')
+
 df = df.dropna(subset=['data', 'fatturato'])
 for col in df.columns:
     if col != 'data':
@@ -101,10 +102,6 @@ col2.metric("Extra per 10 Poke", f"{(tot_extra / tot_poke) * 10:.1f}" if tot_pok
 col3.metric("Costo Ingredienti per Poke", f"€ {costo_ingredienti / tot_poke:.2f}" if tot_poke > 0 else "N/A")
 
 # --- UTILE GIORNALIERO (solo costi ingredienti + dipendente) ---
-st.header("📈 Trend Utile Giornaliero")
-df_sel['utile'] = df_sel['fatturato'] - df_sel['totale_ingredienti'] - df_sel['Dipendente']
-fig_trend = px.line(df_sel, x='data', y='utile', title="Trend Utile Giornaliero", markers=True)
-st.plotly_chart(fig_trend, use_container_width=True)
 
 # --- (segue codice con tabs, esportazione, giornate critiche ecc.) ---
 
