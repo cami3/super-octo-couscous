@@ -4,7 +4,7 @@ import plotly.express as px
 from PIL import Image
 from datetime import timedelta
 
-st.set_page_config(page_title="Pokè To Go – Dashboard Business", layout="wide")
+st.set_page_config(page_title="Pokè To Go! – Dashboard Business", layout="wide")
 logo = Image.open("logo.png")
 st.image(logo, width=150)
 st.markdown("""
@@ -14,7 +14,7 @@ h1, h2, h3 { color: #e85d04; }
 .block-container { padding-top: 2rem; }
 </style>
 """, unsafe_allow_html=True)
-st.title("Pokè To Go – Dashboard Operativa 🍣")
+st.title("Pokè To Go! – Dashboard Operativa 🍣")
 
 st.markdown("""
 **Le spese distribuite tra approvvigionamenti successivi.**  
