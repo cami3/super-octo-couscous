@@ -1,10 +1,10 @@
-# Il codice completo della dashboard Pokè To Go!, corretto e coerente nei calcoli.
+# Dashboard Pokè To Go! – Corretto con logica e calcoli coerenti
 
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 from PIL import Image
-from datetime import timedelta
+from datetime import datetime
 
 # --- CONFIGURAZIONE ---
 st.set_page_config(page_title="Pokè To Go! – Dashboard Business", layout="wide")
@@ -31,13 +31,16 @@ if not uploaded:
     st.stop()
 
 df = pd.read_csv(uploaded, sep=';').dropna(how='all')
-df['data'] = pd.to_datetime(df['data'], format='%d/%m/%Y', errors='coerce')
+try:
+    df['data'] = pd.to_datetime(df['data'], format='%d/%m/%Y', errors='coerce')
+except:
+    df['data'] = pd.to_datetime(df['data'], errors='coerce')
 df = df.dropna(subset=['data', 'fatturato'])
 for col in df.columns:
     if col != 'data':
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
-# --- DEFINIZIONE COLONNE ---
+# --- COLONNE ---
 poke_cols = ['poke_reglular','poke_maxi','poke_baby','fruit_bowl']
 extra_cols = ['Avocado_venduto','Feta_venduto','Philad_venduto','Gomawak_venduto']
 bibite_cols = ['Acqua nat','Acqua gas','Coca cola','Coca zero','corona','ichnusa','fanta','Estathe limone','Estathe pesca']
@@ -62,15 +65,21 @@ for ing in ingred_cols:
 df_dist['data'] = df['data']
 
 # --- INTERVALLI TEMPORALI ---
-min_date, max_date = df['data'].min().date(), df['data'].max().date()
+min_date = df['data'].min()
+max_date = df['data'].max()
+if pd.isna(min_date) or pd.isna(max_date):
+    st.error("Errore: colonne data non valide.")
+    st.stop()
+
 with st.form("date_form"):
-    start, end = st.date_input("📅 Intervallo Analisi", [min_date, max_date], min_value=min_date, max_value=max_date)
+    start, end = st.date_input("📅 Intervallo Analisi", [min_date.date(), max_date.date()], min_value=min_date.date(), max_value=max_date.date())
     submitted = st.form_submit_button("🔍 Analizza")
 
 if not submitted:
     st.stop()
 
-start, end = pd.to_datetime(start), pd.to_datetime(end)
+start = pd.to_datetime(start)
+end = pd.to_datetime(end)
 df_sel = df[(df['data'] >= start) & (df['data'] <= end)].copy()
 df_dist_sel = df_dist[(df_dist['data'] >= start) & (df_dist['data'] <= end)].copy()
 
@@ -85,13 +94,15 @@ df_sel['poke_totali'] = df_sel[poke_cols].sum(axis=1)
 df_sel['extra_totali'] = df_sel[extra_cols].sum(axis=1)
 df_sel['utile'] = df_sel['fatturato'] - df_sel['totale_ingredienti'] - df_sel['Dipendente']
 
-# --- METRICHE BASE ---
+# --- METRICHE ---
 st.header("📌 Metriche Totali – Performance del periodo")
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Fatturato", f"€ {df_sel['fatturato'].sum():,.2f}")
 col2.metric("Ingredienti stimati", f"€ {df_sel['totale_ingredienti'].sum():,.2f}")
 col3.metric("Dipendenti", f"€ {df_sel['Dipendente'].sum():,.2f}")
 col4.metric("Utile stimato", f"€ {df_sel['utile'].sum():,.2f}")
+
+# Il resto della dashboard può seguire: KPI operativi, trend, tabs, confronto annuale, ecc.
 
 # --- KPI OPERATIVI ---
 st.header("📈 KPI Operativi – Efficienza e Ricavi")
