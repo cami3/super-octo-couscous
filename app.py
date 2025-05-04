@@ -1,4 +1,4 @@
-# Il codice completo e finale della dashboard Pokè To Go! aggiornato secondo le indicazioni.
+# Il codice completo e finale della dashboard Pokè To Go! aggiornato e completo.
 
 import streamlit as st
 import pandas as pd
@@ -82,84 +82,44 @@ start, end = pd.to_datetime(start), pd.to_datetime(end)
 prev_start = start.replace(year=start.year - 1)
 prev_end = end.replace(year=end.year - 1)
 
-df_sel = df[(df['data'] >= start) & (df['data'] <= end)]
+df_sel = df[(df['data'] >= start) & (df['data'] <= end)].copy()
 df_prev = df[(df['data'] >= prev_start) & (df['data'] <= prev_end)]
 df_dist['data'] = df['data']
 df_dist_sel = df_dist[(df_dist['data'] >= start) & (df_dist['data'] <= end)]
 
-# --- METRICHE ---
-st.header("📌 Metriche Totali – Performance del periodo")
-col1, col2, col3, col4 = st.columns(4)
 fatturato = df_sel['fatturato'].sum()
 ingredienti = df_sel['totale_ingredienti'].sum()
 dipendenti = df_sel['Dipendente'].sum()
 utile = fatturato - ingredienti - dipendenti
-col1.metric("Fatturato", f"€ {fatturato:,.2f}")
-col2.metric("Ingredienti stimati", f"€ {ingredienti:,.2f}")
-col3.metric("Dipendenti", f"€ {dipendenti:,.2f}")
-col4.metric("Utile stimato", f"€ {utile:,.2f}")
 
-# --- INTERPRETAZIONE SINTETICA ---
-# Le modifiche richieste sono state integrate nel blocco analisi criticità e metriche aggiuntive
-# Tutto il resto del codice (tabs, upload, preprocessing, etc.) resta invariato
-
-# --- INTERPRETAZIONE SINTETICA ---
-st.header("🧐 Lettura sintetica del periodo")
-
-giorni = len(df_sel)
+# --- GIORNATE CRITICHE CORRETTE ---
+df_sel['% ingredienti'] = df_sel.apply(lambda r: safe_pct(r['totale_ingredienti'], r['fatturato']), axis=1)
+df_sel['% dipendenti'] = df_sel.apply(lambda r: safe_pct(r['Dipendente'], r['fatturato']), axis=1)
 critici = df_sel[(df_sel['% ingredienti'] > 35) | (df_sel['% dipendenti'] > 25) | (df_sel['fatturato'] < 300)]
-perc = len(critici) / giorni * 100 if giorni > 0 else 0
-
-# Segmentazione criticità
-critici['n_criticita'] = (
-    (critici['% ingredienti'] > 35).astype(int) +
-    (critici['% dipendenti'] > 25).astype(int) +
-    (critici['fatturato'] < 300).astype(int)
-)
-
-solo1 = critici[critici['n_criticita'] == 1]
-due = critici[critici['n_criticita'] == 2]
-tre = critici[critici['n_criticita'] == 3]
-
-# Impatto economico delle giornate critiche
 utile_critici = critici['fatturato'].sum() - critici['totale_ingredienti'].sum() - critici['Dipendente'].sum()
+sotto_soglia = df_sel[df_sel['fatturato'] < 300]
+fatturato_perso = sotto_soglia['fatturato'].sum()
 perc_utile_critici = safe_pct(utile_critici, utile)
-
-fatturato_perso = df_sel[df_sel['fatturato'] < 300]['fatturato'].sum()
 perc_fatturato_perso = safe_pct(fatturato_perso, fatturato)
 
-st.info(f"Su {giorni} giornate analizzate, {len(critici)} ({perc:.1f}%) presentano almeno una criticità:\n"
-        f"- Con **1 sola criticità**: {len(solo1)}\n"
-        f"- Con **2 criticità**: {len(due)}\n"
-        f"- Con **tutte e 3 le criticità**: {len(tre)}")
+# --- FRASEGGIO CORRETTO DA MOSTRARE ---
+st.markdown(f"""
+Le **giornate critiche** rappresentano il **{perc_utile_critici:.1f}%** dell'**utile complessivo**.
 
-st.write(f"Le giornate critiche rappresentano il **{perc_utile_critici:.1f}%** dell'utile complessivo.")
-st.write(f"Il **fatturato perso** in giornate sotto i 300 € è pari a **{perc_fatturato_perso:.1f}%** del totale.")
+Il **fatturato generato** in giornate con ricavi **sotto i 300 €** è pari al **{perc_fatturato_perso:.1f}%** del totale.
+""")
+st.metric("Utile giornate critiche", f"€ {utile_critici:,.2f}")
 
-if utile <= 0:
-    st.error("🔴 Utile negativo: nel complesso i costi hanno superato i ricavi.")
-elif perc > 50:
-    st.warning("🚠 Molte giornate sotto soglia: osserva la stabilità settimanale.")
-else:
-    st.success("🟢 Buon equilibrio complessivo nel periodo analizzato.")
-
-# --- KPI AGGIUNTIVI ---
+# --- KPI AVANZATI ---
 st.header("📊 KPI Avanzati")
 
-# Margine medio giornaliero
+giorni = len(df_sel)
 margine_medio = utile / giorni if giorni > 0 else 0
 
-# Media settimanale fatturato
 df_sel['settimana'] = df_sel['data'].dt.isocalendar().week
 fatt_per_settimana = df_sel.groupby('settimana')['fatturato'].sum()
 media_settimanale = fatt_per_settimana.mean()
 
-# Trend utile
-utile_giornaliero = df_sel[['data']].copy()
-utile_giornaliero['utile'] = df_sel['fatturato'] - df_sel['totale_ingredienti'] - df_sel['Dipendente']
-fig_trend = px.line(utile_giornaliero, x='data', y='utile', title="Trend Utile Giornaliero", markers=True)
-
-# Incidenza euro ingredienti
 media_ingredienti_euro = df_sel['totale_ingredienti'].mean()
 
 col1, col2, col3, col4 = st.columns(4)
@@ -168,9 +128,13 @@ col2.metric("Fatturato medio settimanale", f"€ {media_settimanale:.2f}")
 col3.metric("Ingredienti / giorno (euro)", f"€ {media_ingredienti_euro:.2f}")
 col4.metric("Utile giornate critiche", f"€ {utile_critici:.2f}")
 
+# --- TREND UTILE GIORNALIERO ---
+st.header("📈 Trend Utile Giornaliero")
+df_sel['utile'] = df_sel['fatturato'] - df_sel['totale_ingredienti'] - df_sel['Dipendente']
+fig_trend = px.line(df_sel, x='data', y='utile', title="Trend Utile Giornaliero", markers=True)
 st.plotly_chart(fig_trend, use_container_width=True)
 
-# --- TABS PRINCIPALI ---
+# --- ALTRI TABS ---
 tabs = st.tabs(["📈 Vendite", "🍱 Extra", "🥤 Costi: Bibite e Sorbetti", "🍚 Ingredienti", "📊 Confronto Annuale", "⚠️ Giornate Critiche", "ℹ️ Aiuto"])
 
 with tabs[0]:
@@ -231,7 +195,6 @@ with tabs[4]:
 
 with tabs[5]:
     st.header("⚠️ Giornate da monitorare")
-    critici = df_sel[(df_sel['% ingredienti'] > 35) | (df_sel['% dipendenti'] > 25) | (df_sel['fatturato'] < 300)]
     critici['Attenzione'] = ""
     critici.loc[critici['% ingredienti'] > 35, 'Attenzione'] += "🧂 Ingredienti alti  "
     critici.loc[critici['% dipendenti'] > 25, 'Attenzione'] += "👥 Dipendenti alti  "
