@@ -76,43 +76,29 @@ df_prev = df[(df['data'] >= prev_start) & (df['data'] <= prev_end)]
 df_dist['data'] = df['data']
 df_dist_sel = df_dist[(df_dist['data'] >= start) & (df_dist['data'] <= end)]
 
-# METRICHE
-def total(col, df, average=False):
-    if len(df) == 0:
-        return None
-    if average:
-        return df[col].mean()
-    return df[col].sum()
-
+# METRICHE TOTALI
 st.header("📌 Metriche Totali – Performance del periodo")
-metriche = [
-    ("🍣 Fatturato", 'fatturato', '€', False),
-    ("💰 Utile stimato", None, '€', False),
-    ("🧂 % Ingredienti", '% ingredienti', '%', True),
-    ("👥 % Dipendenti", '% dipendenti', '%', True),
-    ("🍱 Poke totali", 'poke_totali', '', False),
-    ("🍓 Extra totali", 'extra_totali', '€', False)
-]
+col1, col2, col3, col4 = st.columns(4)
+fatturato = df_sel['fatturato'].sum()
+ingredienti = df_sel['totale_ingredienti'].sum()
+dipendenti = df_sel['Dipendente'].sum()
+utile = fatturato - ingredienti - dipendenti
+col1.metric("Fatturato", f"€ {fatturato:,.2f}")
+col2.metric("Ingredienti stimati", f"€ {ingredienti:,.2f}")
+col3.metric("Dipendenti", f"€ {dipendenti:,.2f}")
+col4.metric("Utile stimato", f"€ {utile:,.2f}")
 
-colonne = st.columns(len(metriche))
-for i, (label, key, unit, avg) in enumerate(metriche):
-    if key:
-        cur = total(key, df_sel, average=avg)
-        prev = total(key, df_prev, average=avg)
-    else:
-        cur = df_sel['fatturato'].sum() - df_sel['totale_ingredienti'].sum() - df_sel['Dipendente'].sum()
-        prev = df_prev['fatturato'].sum() - df_prev['totale_ingredienti'].sum() - df_prev['Dipendente'].sum() if len(df_prev) > 0 else None
-    if cur is None:
-        colonne[i].metric(label, "n.d.", delta="n.d.")
-    else:
-        delta_val = cur - prev if prev is not None else None
-        colonne[i].metric(label, f"{unit}{cur:,.1f}", delta=f"{unit}{delta_val:,.1f}" if delta_val is not None else "n.d.")
-
+# KPI OPERATIVI
 st.header("📈 KPI Operativi – Efficienza e Ricavi")
-st.dataframe(df_sel[['data','fatturato','% ingredienti','% dipendenti','poke_totali','extra_totali'] + poke_cols + extra_cols])
+tot_poke = df_sel['poke_totali'].sum()
+tot_extra = df_sel['extra_totali'].sum()
+col1, col2, col3 = st.columns(3)
+col1.metric("Ricavo Medio per Poke", f"€ {fatturato / tot_poke:.2f}" if tot_poke > 0 else "N/A")
+col2.metric("Extra per 10 Poke", f"{(tot_extra / tot_poke) * 10:.1f}" if tot_poke > 0 else "N/A")
+col3.metric("Costo Ingredienti per Poke", f"€ {ingredienti / tot_poke:.2f}" if tot_poke > 0 else "N/A")
 
 # TABS
-tabs = st.tabs(["🍱 Vendite", "🥑 Extra più richiesti", "🍚 Ingredienti", "🥤 Bevande", "🍧 Sorbetti", "📊 Confronto Annuale", "❗ Giornate da monitorare", "ℹ️ Aiuto"])
+tabs = st.tabs(["🍱 Vendite", "🥑 Extra", "🍚 Ingredienti", "🥤 Bevande", "🍧 Sorbetti", "📊 Confronto Annuale", "❗ Giornate da monitorare", "ℹ️ Aiuto"])
 
 with tabs[0]:
     st.header("🍱 Vendite – Poke e Bowl")
@@ -183,8 +169,8 @@ with tabs[7]:
 - **Ingredienti**: costo distribuito tra approvvigionamenti  
 - Le percentuali sono medie giornaliere nel periodo  
 - Il confronto YoY avviene con lo stesso intervallo dell'anno precedente  
-- Se i dati del periodo precedente non sono disponibili, il delta è segnato come 'n.d.'  
 """)
 
+# Download CSV
 csv = df_sel.to_csv(index=False).encode('utf-8')
 st.download_button("📥 Scarica Analisi CSV", data=csv, file_name="analisi_poketogo.csv", mime='text/csv')
