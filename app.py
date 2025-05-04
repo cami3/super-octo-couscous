@@ -4,7 +4,7 @@ import plotly.express as px
 from PIL import Image
 from datetime import timedelta
 
-st.set_page_config(page_title="Pokè To Go! – Dashboard Business", layout="wide")
+st.set_page_config(page_title="Pokè To Go – Dashboard Business", layout="wide")
 logo = Image.open("logo.png")
 st.image(logo, width=150)
 st.markdown("""
@@ -14,7 +14,7 @@ h1, h2, h3 { color: #e85d04; }
 .block-container { padding-top: 2rem; }
 </style>
 """, unsafe_allow_html=True)
-st.title("Pokè To Go! – Dashboard Operativa 🍣")
+st.title("Pokè To Go – Dashboard Operativa 🍣")
 
 st.markdown("""
 **Le spese distribuite tra approvvigionamenti successivi.**  
@@ -133,8 +133,8 @@ with tabs[1]:
         'Verdure': ['edamame','ceci','mais','carote','cetrioli','pomodori','Cavolo viola','zucchine','cipolle','Goma wakame'],
         'Frutta': ['Avocado','Avo Hass','mango','Lime','uva','Mele','melone','Kiwi','Ananas','Anguria'],
         'Base': ['iceberg','riso_sushi','riso_nero','Riso integrale'],
-        'Granelle e Topping': ['Sesamo nero','Sesamo bianco','Mandorle','nocciole','Cipolle croccanti','Pistacchio'],
-        'Salse e Condimenti': ['Salsa soya','Olio Evo','Teriyaki','Maionese','yogurt','Ponzu','Sriracha','Sale grosso']
+        'Granelle e Topping': ['Sesamo nero','Sesamo bianco','Mandorle','nocciole','Cipolle croccanti','Pistacchio','Sale grosso'],
+        'Salse e Condimenti': ['Salsa soya','Olio Evo','Teriyaki','Maionese','yogurt','Ponzu','Sriracha']
     }
     df_dist['data'] = df['data']
     df_dist_sel = df_dist[(df_dist['data'] >= start) & (df_dist['data'] <= end)]
