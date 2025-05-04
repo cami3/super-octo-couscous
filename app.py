@@ -4,9 +4,9 @@ import plotly.express as px
 from PIL import Image
 from datetime import timedelta
 
-st.set_page_config(page_title="Pokè To Go – Dashboard Business", layout="wide")
-st.image(Image.open("logo.png"), width=150)
-
+st.set_page_config(page_title="Pokè To Go! – Dashboard Business", layout="wide")
+logo = Image.open("logo.png")
+st.image(logo, width=150)
 st.markdown("""
 <style>
 .main { background-color: #fdfcfb; }
@@ -14,14 +14,17 @@ h1, h2, h3 { color: #e85d04; }
 .block-container { padding-top: 2rem; }
 </style>
 """, unsafe_allow_html=True)
-st.title("Pokè To Go – Dashboard Operativa 🍣")
-st.markdown("**Le spese sono distribuite tra approvvigionamenti successivi.**  \n**Giornate critiche: margini ridotti o ricavi sotto soglia.**")
+st.title("Pokè To Go! – Dashboard Operativa 🍣")
+
+st.markdown("""
+**Le spese distribuite tra approvvigionamenti successivi.**  
+**Giornate critiche: margini ridotti o ricavi sotto soglia.**
+""")
 
 uploaded = st.file_uploader("⬆️ Carica CSV", type=["csv"])
 if not uploaded:
     st.stop()
 
-# Dati
 df = pd.read_csv(uploaded, sep=';').dropna(how='all')
 df['data'] = pd.to_datetime(df['data'], dayfirst=True, errors='coerce')
 df = df.dropna(subset=['data','fatturato'])
@@ -37,7 +40,6 @@ cost_cols = ['Dipendente']
 exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data','fatturato']
 ingred_cols = [c for c in df.columns if c not in exclude]
 
-# Distribuzione costi ingredienti
 df_dist = pd.DataFrame(index=df.index)
 for ing in ingred_cols:
     s = df[['data', ing]].dropna()
@@ -51,15 +53,14 @@ for ing in ingred_cols:
     df_dist[ing] = arr
 
 def safe_pct(cost, rev):
-    return cost/rev*100 if rev > 0 else 0
+    return cost/rev*100 if rev>0 else 0
 
 df['totale_ingredienti'] = df_dist.sum(axis=1)
 df['% ingredienti'] = df.apply(lambda r: safe_pct(r['totale_ingredienti'], r['fatturato']), axis=1)
-df['% dipendenti'] = df.apply(lambda r: safe_pct(r['Dipendente'], r['fatturato']), axis=1)
+df['% dipendenti']   = df.apply(lambda r: safe_pct(r['Dipendente'], r['fatturato']), axis=1)
 df['poke_totali'] = df[poke_cols].sum(axis=1)
 df['extra_totali'] = df[extra_cols].sum(axis=1)
 
-# Selezione date e confronto YoY
 min_date, max_date = df['data'].min().date(), df['data'].max().date()
 with st.form("date_form"):
     start, end = st.date_input("📅 Intervallo Analisi", [min_date, max_date], min_value=min_date, max_value=max_date)
@@ -69,19 +70,15 @@ if not submitted:
     st.stop()
 
 start, end = pd.to_datetime(start), pd.to_datetime(end)
-# Year-over-year
-prev_start = start.replace(year=start.year - 1)
-prev_end = end.replace(year=end.year - 1)
+prev_start = start - timedelta(days=(end - start).days)
+prev_end = start - timedelta(days=1)
 
 df_sel = df[(df['data'] >= start) & (df['data'] <= end)]
 df_prev = df[(df['data'] >= prev_start) & (df['data'] <= prev_end)]
 
-# KPI
 def total(col, df, average=False):
-    if len(df) == 0:
-        return None
     if average:
-        return df[col].mean()
+        return df[col].mean() if len(df) > 0 else 0
     return df[col].sum() if col in df.columns else df[col].sum(axis=1).sum()
 
 metriche = [
@@ -90,7 +87,7 @@ metriche = [
     ("🧂 % Ingredienti", '% ingredienti', '%', True),
     ("👥 % Dipendenti", '% dipendenti', '%', True),
     ("🍱 Poke totali", 'poke_totali', '', False),
-    ("🍓 Extra totali", 'extra_totali', '€', False)
+    ("🍓 Extra totali (€)", 'extra_totali', '€', False)
 ]
 
 colonne = st.columns(len(metriche))
@@ -100,17 +97,14 @@ for i, (label, key, unit, avg) in enumerate(metriche):
         prev = total(key, df_prev, average=avg)
     else:
         cur = df_sel['fatturato'].sum() - df_sel['totale_ingredienti'].sum() - df_sel['Dipendente'].sum()
-        prev = df_prev['fatturato'].sum() - df_prev['totale_ingredienti'].sum() - df_prev['Dipendente'].sum() if len(df_prev) > 0 else None
-    if cur is None:
-        colonne[i].metric(label, "n.d.", delta="n.d.")
-    else:
-        delta_val = cur - prev if prev is not None else None
-        colonne[i].metric(label, f"{unit}{cur:,.1f}", delta=f"{unit}{delta_val:,.1f}" if delta_val is not None else "n.d.")
+        prev = df_prev['fatturato'].sum() - df_prev['totale_ingredienti'].sum() - df_prev['Dipendente'].sum()
+    delta_val = cur - prev
+    colonne[i].metric(label, f"{unit}{cur:,.1f}", delta=f"{unit}{delta_val:,.1f}" if delta_val != 0 else None)
 
-# Giornate critiche
-crit = df_sel[(df_sel['fatturato'] < 300) | (df_sel['% ingredienti'] > 35) | (df_sel['% dipendenti'] > 25)]
+crit = df_sel[(df_sel['fatturato']<300) | (df_sel['% ingredienti']>35) | (df_sel['% dipendenti']>25)]
 if len(crit) > 3:
     st.warning(f"⚠️ {len(crit)} giornate critiche nel periodo selezionato.")
+
 if not crit.empty:
     st.header("❗ Giornate da monitorare")
     crit['Attenzione'] = ""
@@ -119,19 +113,17 @@ if not crit.empty:
     crit.loc[crit['fatturato'] < 300, 'Attenzione'] += "📉 Fatturato basso"
     st.dataframe(crit[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1))
 
-# Tabella principale
 st.subheader("📋 Tabella giornaliera")
 st.dataframe(df_sel[['data','fatturato','totale_ingredienti','% ingredienti','Dipendente','% dipendenti','poke_totali','extra_totali'] + poke_cols + extra_cols])
 
-# Tabs
-tabs = st.tabs(["📈 Vendite", "🍱 Ingredienti", "🥤 Bevande", "🍧 Sorbetti", "📊 Confronto Annuale", "ℹ️ Aiuto"])
+tabs = st.tabs(["📈 Vendite","🍱 Ingredienti","🥤 Bevande & Sorbetti","📊 Confronto Annuale","ℹ️ Aiuto"])
 
 with tabs[0]:
     st.subheader("Vendite (pezzi)")
-    melt_poke = df_sel[['data'] + poke_cols].melt('data', var_name='Tipo', value_name='Pezzi')
+    melt_poke = df_sel[['data']+poke_cols].melt('data', var_name='Tipo', value_name='Pezzi')
     st.plotly_chart(px.line(melt_poke, x='data', y='Pezzi', color='Tipo', markers=True), use_container_width=True)
     st.subheader("Extra venduti (€)")
-    melt_extra = df_sel[['data'] + extra_cols].melt('data', var_name='Tipo', value_name='Euro')
+    melt_extra = df_sel[['data']+extra_cols].melt('data', var_name='Tipo', value_name='Euro')
     st.plotly_chart(px.bar(melt_extra, x='data', y='Euro', color='Tipo'), use_container_width=True)
 
 with tabs[1]:
@@ -154,16 +146,11 @@ with tabs[1]:
             st.plotly_chart(px.area(melted, x='data', y='Euro', color='Ingrediente'), use_container_width=True)
 
 with tabs[2]:
-    st.subheader("Bibite (approvvigionamento €)")
-    melt_bibite = df_sel[['data'] + bibite_cols].melt('data', var_name='Bevanda', value_name='Euro')
-    st.plotly_chart(px.bar(melt_bibite, x='data', y='Euro', color='Bevanda'), use_container_width=True)
+    st.subheader("Bibite & Sorbetti (approvvigionamento €)")
+    melt_bs = df_sel[['data']+bibite_cols+sorbetti_cols].melt('data', var_name='Prodotto', value_name='Euro')
+    st.plotly_chart(px.bar(melt_bs, x='data', y='Euro', color='Prodotto'), use_container_width=True)
 
 with tabs[3]:
-    st.subheader("Sorbetti (approvvigionamento €)")
-    melt_sorbetti = df_sel[['data'] + sorbetti_cols].melt('data', var_name='Gusto', value_name='Euro')
-    st.plotly_chart(px.bar(melt_sorbetti, x='data', y='Euro', color='Gusto'), use_container_width=True)
-
-with tabs[4]:
     st.subheader("Confronto Annuale – Costi e Ricavi")
     df['anno'] = df['data'].dt.year
     ann = df.groupby('anno').agg({'fatturato': 'sum', 'totale_ingredienti': 'sum', 'Dipendente': 'sum'}).reset_index()
@@ -174,18 +161,18 @@ with tabs[4]:
         '% ingredienti': '{:.1f}%', '% dipendenti': '{:.1f}%'
     }))
 
-with tabs[5]:
+with tabs[4]:
     st.header("ℹ️ Note Metodi")
     st.markdown("""
-- **Poke**: quantità in pezzi  
-- **Extra**: vendite in euro  
-- **Bibite/Sorbetti**: solo costo, non vendite  
-- **Ingredienti**: costo distribuito tra approvvigionamenti  
-- Le percentuali sono medie giornaliere nel periodo  
-- Il confronto YoY avviene con lo stesso intervallo dell'anno precedente  
-- Se i dati del periodo precedente non sono disponibili, il delta è segnato come 'n.d.'  
+- **Poke**: quantità in pezzi
+- **Extra**: vendite in euro
+- **Bibite/Sorbetti**: solo costo, non vendite
+- **Ingredienti**: costo distribuito tra approvvigionamenti
+- % calcolate solo se fatturato > 0
+- Delta confrontano con intervallo precedente (default: stesso periodo precedente)
+- Percentuali = media giornaliera nel periodo
+- Categorie ingredienti includono granelle/topping
 """)
 
-# Download CSV
 csv = df_sel.to_csv(index=False).encode('utf-8')
 st.download_button("📥 Scarica Analisi CSV", data=csv, file_name="analisi_poketogo.csv", mime='text/csv')
