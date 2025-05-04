@@ -1,3 +1,6 @@
+# Codice aggiornato come richiesto, includendo: riepilogo automatico, interpretazioni più utili,
+# spiegazione delle giornate critiche, meno allarmismo, evidenziazione del risultato complessivo e focus stagionale.
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -20,7 +23,8 @@ st.markdown("""
 st.title("Pokè To Go! – Dashboard Operativa 🍣")
 st.markdown("""
 **Le spese sono distribuite nel tempo tra due approvvigionamenti successivi.**  
-**Le giornate critiche segnalano margini ridotti o ricavi bassi.**
+**Le giornate critiche segnalano margini ridotti o ricavi bassi, ma non indicano necessariamente un problema.**  
+**In una gestione stagionale, il focus va mantenuto sull’andamento complessivo.**
 """)
 
 uploaded = st.file_uploader("⬆️ Carica CSV", type=["csv"])
@@ -100,21 +104,20 @@ col2.metric("Extra per 10 Poke", f"{(tot_extra / tot_poke) * 10:.1f}" if tot_pok
 col3.metric("Costo Medio per Poke", f"€ {ingredienti / tot_poke:.2f}" if tot_poke > 0 else "N/A")
 
 # INTERPRETAZIONE
-st.header("🧠 Interpretazione automatica")
+st.header("🧠 Lettura sintetica del periodo")
 giorni = len(df_sel)
 critici = df_sel[(df_sel['% ingredienti'] > 35) | (df_sel['% dipendenti'] > 25) | (df_sel['fatturato'] < 300)]
 perc = len(critici) / giorni * 100 if giorni > 0 else 0
-st.info(f"Nel periodo selezionato ci sono {len(critici)} giornate critiche su {giorni} totali ({perc:.1f}%).")
-if len(critici) > 3:
-    st.warning("⚠️ Troppe giornate critiche: controlla costi ingredienti e fatturato.")
-else:
-    st.success("✅ Buona tenuta del periodo.")
+st.info(f"Su {giorni} giornate analizzate, {len(critici)} superano almeno una soglia di costo o ricavo ({perc:.1f}%).")
 
-if perc >= 30 or utile <= 0:
-    st.error("🧯 Da migliorare: costi troppo alti o utile insufficiente.")
+if utile <= 0:
+    st.error("🔴 Utile negativo: nel complesso i costi hanno superato i ricavi.")
+elif perc > 50:
+    st.warning("🟠 Costi variabili: molte giornate sotto soglia, verifica distribuzione ingredienti.")
 else:
-    st.success("🌟 Stai mantenendo una buona efficienza operativa!")
+    st.success("🟢 Buon equilibrio: nel complesso il risultato è positivo.")
 
+# Tabs
 tabs = st.tabs(["📈 Vendite", "🍱 Extra", "🍚 Ingredienti", "📊 Confronto Annuale", "ℹ️ Aiuto"])
 
 with tabs[0]:
@@ -168,8 +171,10 @@ with tabs[4]:
 - Il costo ingredienti è **distribuito tra due approvvigionamenti**.
 - Le quantità dei poke sono in **pezzi**, gli extra in **euro vendite**.
 - Bibite e sorbetti sono costi, non vendite.
-- Le giornate critiche hanno: fatturato < 300€, costi ingredienti > 35%, dipendenti > 25%.
-- I delta sono confronti con lo stesso periodo dell’anno precedente.
+- Le giornate critiche indicano un superamento soglie: **fatturato < 300€, ingredienti > 35%, dipendenti > 25%**.
+- I delta vengono confrontati con lo stesso periodo dell’anno precedente (se dati disponibili).
+- In attività stagionali, considera il risultato **complessivo** prima di giudicare singole giornate.
 """)
 
 st.download_button("📥 Scarica Analisi CSV", data=df_sel.to_csv(index=False).encode('utf-8'), file_name="analisi_poketogo.csv", mime='text/csv')
+
