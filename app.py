@@ -32,7 +32,8 @@ if not uploaded:
 
 df = pd.read_csv(uploaded, sep=';').dropna(how='all')
 try:
-    df['data'] = pd.to_datetime(df['data'], format='%d/%m/%Y', errors='coerce')
+    df['data'] = pd.to_datetime(df['data'], dayfirst=True, errors='coerce')
+
 except:
     df['data'] = pd.to_datetime(df['data'], errors='coerce')
 df = df.dropna(subset=['data', 'fatturato'])
