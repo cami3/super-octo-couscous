@@ -1,5 +1,4 @@
-# Il codice completo e finale della dashboard Pokè To Go! sarà suddiviso in due blocchi per chiarezza.
-# Questo è il blocco 1: caricamento, preprocessing, metriche, interpretazione.
+# Il codice completo e finale della dashboard Pokè To Go! aggiornato secondo le indicazioni.
 
 import streamlit as st
 import pandas as pd
@@ -100,37 +99,79 @@ col2.metric("Ingredienti stimati", f"€ {ingredienti:,.2f}")
 col3.metric("Dipendenti", f"€ {dipendenti:,.2f}")
 col4.metric("Utile stimato", f"€ {utile:,.2f}")
 
-st.header("📈 KPI Operativi – Efficienza e Ricavi")
-tot_poke = df_sel['poke_totali'].sum()
-tot_extra = df_sel['extra_totali'].sum()
-col1, col2, col3 = st.columns(3)
-col1.metric("Ricavo Medio per Poke", f"€ {fatturato / tot_poke:.2f}" if tot_poke > 0 else "N/A")
-col2.metric("Extra per 10 Poke", f"{(tot_extra / tot_poke) * 10:.1f}" if tot_poke > 0 else "N/A")
-col3.metric("Costo Medio per Poke", f"€ {ingredienti / tot_poke:.2f}" if tot_poke > 0 else "N/A")
+# --- INTERPRETAZIONE SINTETICA ---
+# Le modifiche richieste sono state integrate nel blocco analisi criticità e metriche aggiuntive
+# Tutto il resto del codice (tabs, upload, preprocessing, etc.) resta invariato
 
 # --- INTERPRETAZIONE SINTETICA ---
-st.header("🧠 Lettura sintetica del periodo")
+st.header("🧐 Lettura sintetica del periodo")
+
 giorni = len(df_sel)
 critici = df_sel[(df_sel['% ingredienti'] > 35) | (df_sel['% dipendenti'] > 25) | (df_sel['fatturato'] < 300)]
 perc = len(critici) / giorni * 100 if giorni > 0 else 0
-solo1 = critici[((critici['% ingredienti'] > 35).astype(int) + 
-                 (critici['% dipendenti'] > 25).astype(int) + 
-                 (critici['fatturato'] < 300).astype(int)) == 1]
-multi = len(critici) - len(solo1)
 
-st.info(f"Su {giorni} giornate analizzate, {len(critici)} superano almeno una soglia ({perc:.1f}%).\n"
-        f"- Giornate con **una sola criticità**: {len(solo1)}\n"
-        f"- Giornate con **più criticità sovrapposte**: {multi}")
+# Segmentazione criticità
+critici['n_criticita'] = (
+    (critici['% ingredienti'] > 35).astype(int) +
+    (critici['% dipendenti'] > 25).astype(int) +
+    (critici['fatturato'] < 300).astype(int)
+)
+
+solo1 = critici[critici['n_criticita'] == 1]
+due = critici[critici['n_criticita'] == 2]
+tre = critici[critici['n_criticita'] == 3]
+
+# Impatto economico delle giornate critiche
+utile_critici = critici['fatturato'].sum() - critici['totale_ingredienti'].sum() - critici['Dipendente'].sum()
+perc_utile_critici = safe_pct(utile_critici, utile)
+
+fatturato_perso = df_sel[df_sel['fatturato'] < 300]['fatturato'].sum()
+perc_fatturato_perso = safe_pct(fatturato_perso, fatturato)
+
+st.info(f"Su {giorni} giornate analizzate, {len(critici)} ({perc:.1f}%) presentano almeno una criticità:\n"
+        f"- Con **1 sola criticità**: {len(solo1)}\n"
+        f"- Con **2 criticità**: {len(due)}\n"
+        f"- Con **tutte e 3 le criticità**: {len(tre)}")
+
+st.write(f"Le giornate critiche rappresentano il **{perc_utile_critici:.1f}%** dell'utile complessivo.")
+st.write(f"Il **fatturato perso** in giornate sotto i 300 € è pari a **{perc_fatturato_perso:.1f}%** del totale.")
 
 if utile <= 0:
     st.error("🔴 Utile negativo: nel complesso i costi hanno superato i ricavi.")
 elif perc > 50:
-    st.warning("🟠 Molte giornate sotto soglia: osserva la stabilità settimanale.")
+    st.warning("🚠 Molte giornate sotto soglia: osserva la stabilità settimanale.")
 else:
     st.success("🟢 Buon equilibrio complessivo nel periodo analizzato.")
 
+# --- KPI AGGIUNTIVI ---
+st.header("📊 KPI Avanzati")
+
+# Margine medio giornaliero
+margine_medio = utile / giorni if giorni > 0 else 0
+
+# Media settimanale fatturato
+df_sel['settimana'] = df_sel['data'].dt.isocalendar().week
+fatt_per_settimana = df_sel.groupby('settimana')['fatturato'].sum()
+media_settimanale = fatt_per_settimana.mean()
+
+# Trend utile
+utile_giornaliero = df_sel[['data']].copy()
+utile_giornaliero['utile'] = df_sel['fatturato'] - df_sel['totale_ingredienti'] - df_sel['Dipendente']
+fig_trend = px.line(utile_giornaliero, x='data', y='utile', title="Trend Utile Giornaliero", markers=True)
+
+# Incidenza euro ingredienti
+media_ingredienti_euro = df_sel['totale_ingredienti'].mean()
+
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Margine medio giornaliero", f"€ {margine_medio:.2f}")
+col2.metric("Fatturato medio settimanale", f"€ {media_settimanale:.2f}")
+col3.metric("Ingredienti / giorno (euro)", f"€ {media_ingredienti_euro:.2f}")
+col4.metric("Utile giornate critiche", f"€ {utile_critici:.2f}")
+
+st.plotly_chart(fig_trend, use_container_width=True)
+
 # --- TABS PRINCIPALI ---
-tabs = st.tabs(["📈 Vendite", "🍱 Extra", "🥤 Bibite", "🍧 Sorbetti", "🍚 Ingredienti", "📊 Confronto Annuale", "⚠️ Giornate Critiche", "ℹ️ Aiuto"])
+tabs = st.tabs(["📈 Vendite", "🍱 Extra", "🥤 Costi: Bibite e Sorbetti", "🍚 Ingredienti", "📊 Confronto Annuale", "⚠️ Giornate Critiche", "ℹ️ Aiuto"])
 
 with tabs[0]:
     st.header("📈 Vendite – Poke e Bowl")
@@ -143,16 +184,17 @@ with tabs[1]:
     st.plotly_chart(px.bar(melt_extra, x='data', y='Euro', color='Tipo'), use_container_width=True)
 
 with tabs[2]:
-    st.header("🥤 Bibite (costi approvvigionamento €)")
-    melt_bib = df_sel[['data'] + bibite_cols].melt('data', var_name='Prodotto', value_name='Euro')
-    st.plotly_chart(px.bar(melt_bib, x='data', y='Euro', color='Prodotto'), use_container_width=True)
+    subtabs = st.tabs(["🥤 Bibite", "🍧 Sorbetti"])
+    with subtabs[0]:
+        st.header("🥤 Bibite – Costi di Approvvigionamento")
+        melt_bib = df_sel[['data'] + bibite_cols].melt('data', var_name='Prodotto', value_name='Euro')
+        st.plotly_chart(px.bar(melt_bib, x='data', y='Euro', color='Prodotto'), use_container_width=True)
+    with subtabs[1]:
+        st.header("🍧 Sorbetti – Costi di Approvvigionamento")
+        melt_sorb = df_sel[['data'] + sorbetti_cols].melt('data', var_name='Gusto', value_name='Euro')
+        st.plotly_chart(px.bar(melt_sorb, x='data', y='Euro', color='Gusto'), use_container_width=True)
 
 with tabs[3]:
-    st.header("🍧 Sorbetti (costi approvvigionamento €)")
-    melt_sorb = df_sel[['data'] + sorbetti_cols].melt('data', var_name='Gusto', value_name='Euro')
-    st.plotly_chart(px.bar(melt_sorb, x='data', y='Euro', color='Gusto'), use_container_width=True)
-
-with tabs[4]:
     st.header("🍚 Ingredienti per Categoria")
     categorie = {
         'Proteine': ['salmone','tonno','Tonno Saku','Polpo','Gamberetti','Pollo Nuggets','Pollo fette','Feta','Formaggio spalmabile','Tofu','Uova'],
@@ -169,7 +211,7 @@ with tabs[4]:
             melted = df_dist_sel[['data'] + validi].melt(id_vars='data', var_name='Ingrediente', value_name='Euro')
             st.plotly_chart(px.area(melted, x='data', y='Euro', color='Ingrediente'), use_container_width=True)
 
-with tabs[5]:
+with tabs[4]:
     st.header("📊 Confronto Annuale – Costi e Ricavi")
     df['anno'] = df['data'].dt.year
     ann = df.groupby('anno').agg({
@@ -187,15 +229,16 @@ with tabs[5]:
         '% dipendenti': '{:.1f}%'
     }))
 
-with tabs[6]:
+with tabs[5]:
     st.header("⚠️ Giornate da monitorare")
+    critici = df_sel[(df_sel['% ingredienti'] > 35) | (df_sel['% dipendenti'] > 25) | (df_sel['fatturato'] < 300)]
     critici['Attenzione'] = ""
     critici.loc[critici['% ingredienti'] > 35, 'Attenzione'] += "🧂 Ingredienti alti  "
     critici.loc[critici['% dipendenti'] > 25, 'Attenzione'] += "👥 Dipendenti alti  "
     critici.loc[critici['fatturato'] < 300, 'Attenzione'] += "📉 Fatturato basso"
     st.dataframe(critici[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1))
 
-with tabs[7]:
+with tabs[6]:
     st.header("ℹ️ Aiuto e Note Metodo")
     st.markdown("""
 - Il **costo ingredienti è distribuito** tra due approvvigionamenti successivi.
