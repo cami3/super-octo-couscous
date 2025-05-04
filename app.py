@@ -4,19 +4,37 @@ import plotly.express as px
 from PIL import Image
 from datetime import timedelta
 
-st.set_page_config(page_title="Pokè To Go – Dashboard Business", layout="wide")
+st.set_page_config(page_title="Pokè To Go! – Dashboard Business", layout="wide")
 st.image(Image.open("logo.png"), width=150)
 
 st.markdown("""
-<style>
-.main { background-color: #fdfcfb; }
-h1, h2, h3 { color: #e85d04; }
-.block-container { padding-top: 2rem; }
-</style>
+    <style>
+    .main {
+        background-color: #fdfcfb;
+    }
+    h1, h2, h3 {
+        color: #e85d04;
+    }
+    .stMetric {
+        background-color: #fff7ed;
+        border-radius: 10px;
+        padding: 10px !important;
+    }
+    .block-container {
+        padding-top: 2rem;
+    }
+    .stDataFrame {
+        background-color: white;
+    }
+    </style>
 """, unsafe_allow_html=True)
-st.title("Pokè To Go – Dashboard Operativa 🍣")
+st.title("Pokè To Go! – Dashboard Operativa 🍣")
 
-st.markdown("**Le spese sono distribuite tra approvvigionamenti successivi.**  \n**Giornate critiche: margini ridotti o ricavi sotto soglia.**")
+# INTRO
+st.markdown("""
+**Le spese sono distribuite nel tempo tra due approvvigionamenti successivi.**  
+**Le giornate critiche segnalano margini ridotti o ricavi bassi.**
+""")
 
 uploaded = st.file_uploader("⬆️ Carica CSV", type=["csv"])
 if not uploaded:
@@ -58,7 +76,6 @@ df['% dipendenti'] = df.apply(lambda r: safe_pct(r['Dipendente'], r['fatturato']
 df['poke_totali'] = df[poke_cols].sum(axis=1)
 df['extra_totali'] = df[extra_cols].sum(axis=1)
 
-# Selezione periodo e confronto YoY
 min_date, max_date = df['data'].min().date(), df['data'].max().date()
 with st.form("date_form"):
     start, end = st.date_input("📅 Intervallo Analisi", [min_date, max_date], min_value=min_date, max_value=max_date)
@@ -76,7 +93,7 @@ df_prev = df[(df['data'] >= prev_start) & (df['data'] <= prev_end)]
 df_dist['data'] = df['data']
 df_dist_sel = df_dist[(df_dist['data'] >= start) & (df_dist['data'] <= end)]
 
-# METRICHE TOTALI
+# METRICHE
 st.header("📌 Metriche Totali – Performance del periodo")
 col1, col2, col3, col4 = st.columns(4)
 fatturato = df_sel['fatturato'].sum()
@@ -88,89 +105,89 @@ col2.metric("Ingredienti stimati", f"€ {ingredienti:,.2f}")
 col3.metric("Dipendenti", f"€ {dipendenti:,.2f}")
 col4.metric("Utile stimato", f"€ {utile:,.2f}")
 
-# KPI OPERATIVI
 st.header("📈 KPI Operativi – Efficienza e Ricavi")
 tot_poke = df_sel['poke_totali'].sum()
 tot_extra = df_sel['extra_totali'].sum()
 col1, col2, col3 = st.columns(3)
 col1.metric("Ricavo Medio per Poke", f"€ {fatturato / tot_poke:.2f}" if tot_poke > 0 else "N/A")
 col2.metric("Extra per 10 Poke", f"{(tot_extra / tot_poke) * 10:.1f}" if tot_poke > 0 else "N/A")
-col3.metric("Costo Ingredienti per Poke", f"€ {ingredienti / tot_poke:.2f}" if tot_poke > 0 else "N/A")
+col3.metric("Costo Medio per Poke", f"€ {ingredienti / tot_poke:.2f}" if tot_poke > 0 else "N/A")
+
+# INTERPRETAZIONE
+st.header("🧠 Interpretazione automatica")
+giorni = len(df_sel)
+critici = df_sel[(df_sel['% ingredienti'] > 35) | (df_sel['% dipendenti'] > 25) | (df_sel['fatturato'] < 300)]
+perc = len(critici) / giorni * 100 if giorni > 0 else 0
+st.info(f"Nel periodo selezionato ci sono {len(critici)} giornate critiche su {giorni} totali ({perc:.1f}%).")
+if len(critici) > 3:
+    st.warning("⚠️ Troppe giornate critiche: controlla costi ingredienti e fatturato.")
+else:
+    st.success("✅ Buona tenuta del periodo.")
+
+# BOX MIGLIORAMENTO
+if perc >= 30 or utile <= 0:
+    st.error("🧯 Da migliorare: costi troppo alti o utile insufficiente.")
+else:
+    st.success("🌟 Stai mantenendo una buona efficienza operativa!")
 
 # TABS
-tabs = st.tabs(["🍱 Vendite", "🥑 Extra", "🍚 Ingredienti", "🥤 Bevande", "🍧 Sorbetti", "📊 Confronto Annuale", "❗ Giornate da monitorare", "ℹ️ Aiuto"])
+tabs = st.tabs(["📈 Vendite", "🍱 Extra", "🍚 Ingredienti", "📊 Confronto Annuale", "ℹ️ Aiuto"])
 
 with tabs[0]:
-    st.header("🍱 Vendite – Poke e Bowl")
+    st.header("📈 Vendite – Poke e Bowl")
     melt_poke = df_sel[['data'] + poke_cols].melt('data', var_name='Tipo', value_name='Pezzi')
     st.plotly_chart(px.line(melt_poke, x='data', y='Pezzi', color='Tipo', markers=True), use_container_width=True)
 
 with tabs[1]:
-    st.header("🥑 Extra più richiesti")
+    st.header("🍱 Extra più richiesti")
     melt_extra = df_sel[['data'] + extra_cols].melt('data', var_name='Tipo', value_name='Euro')
     st.plotly_chart(px.bar(melt_extra, x='data', y='Euro', color='Tipo'), use_container_width=True)
 
 with tabs[2]:
-    st.header("🍚 Ingredienti per Categoria (euro)")
+    st.header("🍚 Ingredienti per Categoria")
     categorie = {
         'Proteine': ['salmone','tonno','Tonno Saku','Polpo','Gamberetti','Pollo Nuggets','Pollo fette','Feta','Formaggio spalmabile','Tofu','Uova'],
         'Verdure': ['edamame','ceci','mais','carote','cetrioli','pomodori','Cavolo viola','zucchine','cipolle','Goma wakame'],
         'Frutta': ['Avocado','Avo Hass','mango','Lime','uva','Mele','melone','Kiwi','Ananas','Anguria'],
         'Base': ['iceberg','riso_sushi','riso_nero','Riso integrale'],
-        'Granelle e Topping': ['Sesamo nero','Sesamo bianco','Mandorle','nocciole','Cipolle croccanti','Pistacchio','Sale grosso'],
-        'Salse e Condimenti': ['Salsa soya','Olio Evo','Teriyaki','Maionese','yogurt','Ponzu','Sriracha']
+        'Topping': ['Sesamo nero','Sesamo bianco','Mandorle','nocciole','Cipolle croccanti','Pistacchio','Sale grosso'],
+        'Salse': ['Salsa soya','Olio Evo','Teriyaki','Maionese','yogurt','Ponzu','Sriracha']
     }
     for nome, cols in categorie.items():
-        st.markdown(f"**{nome}**")
-        validi = [col for col in cols if col in df_dist_sel.columns]
+        st.subheader(nome)
+        validi = [c for c in cols if c in df_dist_sel.columns]
         if validi:
             melted = df_dist_sel[['data'] + validi].melt(id_vars='data', var_name='Ingrediente', value_name='Euro')
             st.plotly_chart(px.area(melted, x='data', y='Euro', color='Ingrediente'), use_container_width=True)
 
 with tabs[3]:
-    st.header("🥤 Bevande")
-    melt_bibite = df_sel[['data'] + bibite_cols].melt('data', var_name='Bevanda', value_name='Euro')
-    st.plotly_chart(px.bar(melt_bibite, x='data', y='Euro', color='Bevanda'), use_container_width=True)
-
-with tabs[4]:
-    st.header("🍧 Sorbetti")
-    melt_sorbetti = df_sel[['data'] + sorbetti_cols].melt('data', var_name='Gusto', value_name='Euro')
-    st.plotly_chart(px.bar(melt_sorbetti, x='data', y='Euro', color='Gusto'), use_container_width=True)
-
-with tabs[5]:
     st.header("📊 Confronto Annuale – Costi e Ricavi")
     df['anno'] = df['data'].dt.year
-    ann = df.groupby('anno').agg({'fatturato': 'sum', 'totale_ingredienti': 'sum', 'Dipendente': 'sum'}).reset_index()
+    ann = df.groupby('anno').agg({
+        'fatturato': 'sum', 
+        'totale_ingredienti': 'sum', 
+        'Dipendente': 'sum'
+    }).reset_index()
     ann['% ingredienti'] = ann.apply(lambda r: safe_pct(r['totale_ingredienti'], r['fatturato']), axis=1)
     ann['% dipendenti'] = ann.apply(lambda r: safe_pct(r['Dipendente'], r['fatturato']), axis=1)
     st.dataframe(ann.style.format({
-        'fatturato': '€{:.2f}', 'totale_ingredienti': '€{:.2f}', 'Dipendente': '€{:.2f}',
-        '% ingredienti': '{:.1f}%', '% dipendenti': '{:.1f}%'
+        'fatturato': '€{:.2f}',
+        'totale_ingredienti': '€{:.2f}',
+        'Dipendente': '€{:.2f}',
+        '% ingredienti': '{:.1f}%',
+        '% dipendenti': '{:.1f}%'
     }))
 
-with tabs[6]:
-    st.header("❗ Giornate da monitorare")
-    crit = df_sel[(df_sel['fatturato'] < 300) | (df_sel['% ingredienti'] > 35) | (df_sel['% dipendenti'] > 25)]
-    if crit.empty:
-        st.success("Nessuna giornata critica nel periodo selezionato.")
-    else:
-        crit['Attenzione'] = ""
-        crit.loc[crit['% ingredienti'] > 35, 'Attenzione'] += "🧂 Alto costo ingredienti  "
-        crit.loc[crit['% dipendenti'] > 25, 'Attenzione'] += "👥 Alto costo dipendenti  "
-        crit.loc[crit['fatturato'] < 300, 'Attenzione'] += "📉 Fatturato basso"
-        st.dataframe(crit[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1))
-
-with tabs[7]:
-    st.header("ℹ️ Note Metodi")
+with tabs[4]:
+    st.header("ℹ️ Aiuto e Note Metodo")
     st.markdown("""
-- **Poke**: quantità in pezzi  
-- **Extra**: vendite in euro  
-- **Bibite/Sorbetti**: solo costo, non vendite  
-- **Ingredienti**: costo distribuito tra approvvigionamenti  
-- Le percentuali sono medie giornaliere nel periodo  
-- Il confronto YoY avviene con lo stesso intervallo dell'anno precedente  
+- Il costo ingredienti è **distribuito tra due approvvigionamenti**.
+- Le quantità dei poke sono in **pezzi**, gli extra in **euro vendite**.
+- Bibite e sorbetti sono costi, non vendite.
+- Le giornate critiche hanno: fatturato < 300€, costi ingredienti > 35%, dipendenti > 25%.
+- I delta sono confronti con lo stesso periodo dell’anno precedente.
 """)
 
-# Download CSV
+# ESPORTAZIONE SOLO DOPO TUTTO
 csv = df_sel.to_csv(index=False).encode('utf-8')
 st.download_button("📥 Scarica Analisi CSV", data=csv, file_name="analisi_poketogo.csv", mime='text/csv')
