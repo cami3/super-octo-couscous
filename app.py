@@ -80,6 +80,7 @@ df['% ingredienti'] = df.apply(lambda r: safe_pct(r['totale_ingredienti'], r['fa
 df['% dipendenti'] = df.apply(lambda r: safe_pct(r['Dipendente'], r['fatturato']), axis=1)
 df['poke_totali'] = df[poke_cols].sum(axis=1)
 df['extra_totali'] = df[extra_cols].sum(axis=1)
+df['bibite_sorbetti'] = df[bibite_cols + sorbetti_cols].sum(axis=1)
 
 min_date, max_date = df['data'].min().date(), df['data'].max().date()
 with st.form("date_form"):
@@ -99,15 +100,18 @@ df_dist_sel = df_dist[(df_dist['data'] >= start) & (df_dist['data'] <= end)]
 
 # --- KPI ---
 st.header("📌 Riepilogo operativo")
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 fatturato = df_sel['fatturato'].sum()
 ingredienti = df_sel['totale_ingredienti'].sum()
 dipendenti = df_sel['Dipendente'].sum()
-utile = fatturato - ingredienti - dipendenti
+bibite_sorbetti = df_sel['bibite_sorbetti'].sum()
+utile = fatturato - ingredienti - dipendenti - bibite_sorbetti
 col1.metric("Fatturato", f"€ {fatturato:,.2f}")
-col2.metric("Ingredienti stimati", f"€ {ingredienti:,.2f}")
+col2.metric("Ingredienti", f"€ {ingredienti:,.2f}")
 col3.metric("Dipendenti", f"€ {dipendenti:,.2f}")
-col4.metric("Utile stimato", f"€ {utile:,.2f}")
+col4.metric("Bibite/Sorbetti", f"€ {bibite_sorbetti:,.2f}")
+col5.metric("Utile stimato", f"€ {utile:,.2f}")
+
 
 tot_poke = df_sel['poke_totali'].sum()
 tot_extra = df_sel['extra_totali'].sum()
