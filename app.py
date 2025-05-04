@@ -31,8 +31,7 @@ if not uploaded:
     st.stop()
 
 df = pd.read_csv(uploaded, sep=';').dropna(how='all')
-df['data'] = pd.to_datetime(df['data'], dayfirst=True, errors='coerce')
-
+df['data'] = pd.to_datetime(df['data'], format='%d/%m/%Y', errors='coerce')
 df = df.dropna(subset=['data', 'fatturato'])
 for col in df.columns:
     if col != 'data':
@@ -60,28 +59,12 @@ for ing in ingred_cols:
             arr[(df['data'] >= a) & (df['data'] < b)] += s.iloc[i][ing] / days
     df_dist[ing] = arr
 
-# --- CALCOLI AGGIUNTIVI ---
-def safe_pct(cost, rev):
-    return cost/rev*100 if rev > 0 else 0
+df_dist['data'] = df['data']  # assicurati che 'data' sia colonna e non indice
 
-df['totale_ingredienti'] = df_dist.sum(axis=1)
-df['% ingredienti'] = df.apply(lambda r: safe_pct(r['totale_ingredienti'], r['fatturato']), axis=1)
-df['% dipendenti'] = df.apply(lambda r: safe_pct(r['Dipendente'], r['fatturato']), axis=1)
-df['poke_totali'] = df[poke_cols].sum(axis=1)
-df['extra_totali'] = df[extra_cols].sum(axis=1)
+# --- Rimozione duplicato: Trend Utile Giornaliero viene visualizzato una sola volta più avanti ---
 
-# --- INTERVALLI TEMPORALI ---
-min_date, max_date = df['data'].min().date(), df['data'].max().date()
-with st.form("date_form"):
-    start, end = st.date_input("📅 Intervallo Analisi", [min_date, max_date], min_value=min_date, max_value=max_date)
-    submitted = st.form_submit_button("🔍 Analizza")
-
-if not submitted:
-    st.stop()
-
-start, end = pd.to_datetime(start), pd.to_datetime(end)
-df_sel = df[(df['data'] >= start) & (df['data'] <= end)].copy()
-df_dist_sel = df_dist[(df['data'] >= start) & (df['data'] <= end)]
+# --- FIX: df_dist_sel con colonna 'data' presente ---
+df_dist_sel = df_dist[(df_dist['data'] >= df['data'].min()) & (df_dist['data'] <= df['data'].max())].copy()
 
 # --- METRICHE BASE ---
 st.header("📌 Metriche Totali – Performance del periodo")
