@@ -88,8 +88,13 @@ min_date, max_date = df['data'].min().date(), df['data'].max().date()
 with st.form("date_form"):
     start, end = st.date_input("📅 Seleziona periodo", [min_date, max_date], min_value=min_date, max_value=max_date)
     submitted = st.form_submit_button("📊 Analizza")
+
+if submitted:
+    st.info(f"🔎 Hai selezionato il periodo: **{start.strftime('%d/%m/%Y')} – {end.strftime('%d/%m/%Y')}**")
+
 if not submitted:
     st.stop()
+
 
 start, end = pd.to_datetime(start), pd.to_datetime(end)
 prev_start = start.replace(year=start.year - 1)
