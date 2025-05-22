@@ -122,37 +122,38 @@ if durata < 3:
 prev_start = start.replace(year=start.year - 1)
 prev_end = end.replace(year=end.year - 1)
 
-# --- DISTRIBUZIONE COSTI ---
-# --- DISTRIBUZIONE COSTI CORRETTA ---
+# --- DISTRIBUZIONE COSTI CORRETTA (spezzata tra stagioni annuali) ---
 df_dist = pd.DataFrame(index=df.index)
 for ing in ingred_cols:
     s = df[['data', ing]].dropna()
     s = s[s[ing] > 0].sort_values('data')
     arr = pd.Series(0.0, index=df.index)
+
+    # ▸ Tra acquisti nello stesso anno
     for i in range(len(s) - 1):
-        a, b = s.iloc[i]['data'], s.iloc[i+1]['data']
+        a = s.iloc[i]['data']
+        b = s.iloc[i+1]['data']
         if a.year == b.year:
-            intervallo = (df['data'] >= a) & (df['data'] < b) & (df['aperto'])
+            intervallo = (df['data'] >= a) & (df['data'] < b)
             giorni_utili = intervallo.sum()
-            if giorni_utili:
+            if giorni_utili > 0:
                 arr[intervallo] += s.iloc[i][ing] / giorni_utili
 
-
-
-    # ✅ Distribuzione dopo l’ultimo acquisto fino alla fine
-    # ✅ Distribuzione dopo l’ultimo acquisto fino alla fine, solo su giorni esistenti
+    # ▸ Dopo ultimo acquisto (fino alla fine dell'anno in corso)
     if not s.empty:
         last_date = s.iloc[-1]['data']
         last_value = s.iloc[-1][ing]
         final_day = df['data'].max()
-        intervallo_finale = (df['data'] >= last_date) & (df['data'] <= final_day)
-        giorni_utili_finali = intervallo_finale.sum()
-        if giorni_utili_finali > 0:
-            arr[intervallo_finale] += last_value / giorni_utili_finali
 
-
+        # spalmatura solo nello stesso anno dell'acquisto
+        if last_date.year == final_day.year:
+            intervallo_finale = (df['data'] >= last_date) & (df['data'] <= final_day)
+            giorni_utili_finali = intervallo_finale.sum()
+            if giorni_utili_finali > 0:
+                arr[intervallo_finale] += last_value / giorni_utili_finali
 
     df_dist[ing] = arr
+
 
 
 
