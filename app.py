@@ -144,13 +144,14 @@ for ing in ingred_cols:
         last_date = s.iloc[-1]['data']
         last_value = s.iloc[-1][ing]
         final_day = df['data'].max()
+    
+        # spalmatura solo entro l'anno del last_date
+        fine_anno = pd.Timestamp(year=last_date.year, month=12, day=31)
+        intervallo_finale = (df['data'] >= last_date) & (df['data'] <= fine_anno)
+        giorni_utili_finali = intervallo_finale.sum()
+        if giorni_utili_finali > 0:
+            arr[intervallo_finale] += last_value / giorni_utili_finali
 
-        # spalmatura solo nello stesso anno dell'acquisto
-        if last_date.year == final_day.year:
-            intervallo_finale = (df['data'] >= last_date) & (df['data'] <= final_day)
-            giorni_utili_finali = intervallo_finale.sum()
-            if giorni_utili_finali > 0:
-                arr[intervallo_finale] += last_value / giorni_utili_finali
 
     df_dist[ing] = arr
 
