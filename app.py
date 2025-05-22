@@ -215,7 +215,7 @@ st.subheader("💰 Giorni migliori per margine per poke")
 st.dataframe(top_days[['data', 'margine_per_poke', 'fatturato', 'poke_totali']].round(2))
 
 # --- TABS ---
-tabs = st.tabs(["📈 Vendite", "🍱 Extra", "🥤 Bibite", "🍧 Sorbetti", "🍚 Ingredienti", "📊 Annuale", "⚠️ Giornate Critiche", "ℹ️ Aiuto", "Rifornimenti"])
+tabs = st.tabs(["📈 Vendite", "🍱 Extra", "🥤 Bibite", "🍧 Sorbetti", "🍚 Ingredienti", "📊 Annuale", "⚠️ Giornate Critiche", "ℹ️ Aiuto", "📦 Rifornimenti"])
 
 with tabs[0]:
     st.header("📈 Vendite - Poke e Bowl")
@@ -334,7 +334,7 @@ with tabs[7]:
 """)
 
 with tabs[8]:
-    st.header("Rifornimenti Effettivi")
+    st.header("📦 Rifornimenti Effettivi")
 
     # --- Categorie ingredienti ---
     categorie = {
@@ -348,7 +348,7 @@ with tabs[8]:
     }
 
     # --- Selezione categoria ---
-    cat_sel = st.selectbox("\ud83e\udc62 Filtra per categoria", list(categorie.keys()), index=0)
+    cat_sel = st.selectbox("Filtra per categoria", list(categorie.keys()), index=0)
     col_sel = categorie[cat_sel]
     df_rif = df[['data'] + col_sel].copy()
     df_rif = df_rif[(df_rif[col_sel] > 0).any(axis=1)]
@@ -362,13 +362,13 @@ with tabs[8]:
         st.stop()
 
     # --- \ud83d\udcca Grafico barre impilate
-    st.subheader("\ud83d\udcca Spese per Ingrediente nel tempo")
+    st.subheader("Spese per Ingrediente nel tempo")
     fig_bar = px.bar(melted, x='data', y='Spesa (€)', color='Ingrediente', barmode='stack')
     fig_bar.update_layout(xaxis_title="Data", yaxis_title="€ spesi", title="\ud83d\udce6 Rifornimenti")
     st.plotly_chart(fig_bar, use_container_width=True)
 
     # --- \ud83d\udcc8 Spesa cumulata
-    st.subheader("\ud83d\udcc8 Andamento spesa cumulata")
+    st.subheader("\Andamento spesa cumulata")
     daily = melted.groupby('data')['Spesa (€)'].sum().reset_index()
     daily['Spesa Cumulata (€)'] = daily['Spesa (€)'].cumsum()
     fig_line = px.line(daily, x='data', y='Spesa Cumulata (€)', markers=True)
@@ -379,11 +379,11 @@ with tabs[8]:
     melted['Avviso'] = melted['Spesa (€)'].apply(lambda x: "\u26a0 Alto" if x > 100 else "")
 
     # --- \ud83d\udccb Tabella giornaliera
-    st.subheader("\ud83d\udccb Dettaglio Giornaliero")
+    st.subheader("Dettaglio Giornaliero")
     st.dataframe(melted.sort_values(['data', 'Ingrediente']), use_container_width=True)
 
     # --- \ud83d\udd22 Confronto categorie (extra)
-    st.subheader("\ud83d\udd22 Spesa Totale per Categoria")
+    st.subheader("Spesa Totale per Categoria")
     cat_sums = {cat: df[cols].sum().sum() for cat, cols in categorie.items() if cat != 'Tutti'}
     df_cat_sums = pd.DataFrame(list(cat_sums.items()), columns=['Categoria', 'Spesa Totale (€)'])
     fig_pie = px.pie(df_cat_sums, values='Spesa Totale (€)', names='Categoria', title="\ud83d\udcc9 Distribuzione Spesa per Categoria")
