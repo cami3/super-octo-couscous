@@ -257,7 +257,7 @@ with tabs[6]:
             "basso" not in row['Attenzione']
         ])
         row_class = "perfetto" if is_perfect else ""
-        table_html += f"""
+        table_html += """
         <tr class="{row_class}">
             <td>{row['data']}</td>
             <td>{row['fatturato']}</td>
