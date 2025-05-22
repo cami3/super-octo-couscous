@@ -199,9 +199,9 @@ with tabs[5]:
 with tabs[6]:
     st.header("⚠️ Giornate da monitorare")
     critici['Attenzione'] = ""
-    critici.loc[critici['% ingredienti'] > 35, 'Attenzione'] += "🧂 Ingredienti alti  "
-    critici.loc[critici['% dipendenti'] > 25, 'Attenzione'] += "👥 Dipendenti alti  "
-    critici.loc[critici['fatturato'] < 300, 'Attenzione'] += "📉 Fatturato basso"
+    critici.loc[critici['% ingredienti'] > 25, 'Attenzione'] += "🧂 Ingredienti alti  "
+    critici.loc[critici['% dipendenti'] > 20, 'Attenzione'] += "👥 Dipendenti alti  "
+    critici.loc[critici['fatturato'] < 450, 'Attenzione'] += "📉 Fatturato basso"
     st.dataframe(critici[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1))
 
 with tabs[7]:
