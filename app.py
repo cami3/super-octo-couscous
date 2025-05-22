@@ -182,10 +182,10 @@ fig.update_traces(texttemplate='€ %{text:.2f}', textposition='outside')
 fig.update_layout(title="🥇 Top 10 Ingredienti – Spesa Media Giornaliera", yaxis_title="€ al giorno")
 st.plotly_chart(fig, use_container_width=True)
 
-print("Somma ingredienti grezzi:", df[ingred_cols].sum().sum())
-print("Somma ingredienti spalmati:", df_dist.sum().sum())
-print("Somma spalmati in df_sel:", df_sel['totale_ingredienti'].sum())
-print("Somma grezzi in df_sel:", df_sel['ingredienti_grezzi'].sum())
+st.write("Somma ingredienti grezzi:", df[ingred_cols].sum().sum())
+st.write("Somma ingredienti spalmati:", df_dist.sum().sum())
+st.write("Somma spalmati in df_sel:", df_sel['totale_ingredienti'].sum())
+st.write("Somma grezzi in df_sel:", df_sel['ingredienti_grezzi'].sum())
 
 
 # --- KPI ---
