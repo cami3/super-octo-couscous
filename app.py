@@ -131,22 +131,23 @@ for ing in ingred_cols:
     arr = pd.Series(0.0, index=df.index)
     for i in range(len(s) - 1):
         a, b = s.iloc[i]['data'], s.iloc[i+1]['data']
-        giorni = (b - a).days
-        if giorni > 0:
-            intervallo = (df['data'] >= a) & (df['data'] < b)  # include 'a', esclude 'b'
-            arr[intervallo] += s.iloc[i][ing] / giorni
+        intervallo = (df['data'] >= a) & (df['data'] < b)
+        giorni_utili = intervallo.sum()
+        if giorni_utili > 0:
+            arr[intervallo] += s.iloc[i][ing] / giorni_utili
 
 
 
     # ✅ Distribuzione dopo l’ultimo acquisto fino alla fine
+    # ✅ Distribuzione dopo l’ultimo acquisto fino alla fine, solo su giorni esistenti
     if not s.empty:
         last_date = s.iloc[-1]['data']
         last_value = s.iloc[-1][ing]
         final_day = df['data'].max()
-        # ✅ CORRETTO: spalma solo sui giorni successivi
-        giorni_finali = (final_day - last_date).days + 1
-        if giorni_finali > 0:
-            arr[(df['data'] >= last_date) & (df['data'] <= final_day)] += last_value / giorni_finali
+        intervallo_finale = (df['data'] >= last_date) & (df['data'] <= final_day)
+        giorni_utili_finali = intervallo_finale.sum()
+        if giorni_utili_finali > 0:
+            arr[intervallo_finale] += last_value / giorni_utili_finali
 
 
 
