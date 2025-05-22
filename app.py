@@ -61,6 +61,8 @@ cost_cols = ['Dipendente']
 exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data','fatturato']
 ingred_cols = [c for c in df.columns if c not in exclude]
 
+df['ingredienti_grezzi'] = df[ingred_cols].sum(axis=1)
+df['% ingredienti grezzi'] = df.apply(lambda r: safe_pct(r['ingredienti_grezzi'], r['fatturato']), axis=1)
 
 
 # Min e max da dati
@@ -177,7 +179,7 @@ st.plotly_chart(fig, use_container_width=True)
 
 # --- KPI ---
 st.header("📌 Riepilogo operativo")
-col1, col2, col3, col4, col5 = st.columns(5)
+col1, col2, col3, col4, col5, col6 = st.columns(6)
 fatturato = df_sel['fatturato'].sum()
 ingredienti = df_sel['totale_ingredienti'].sum()
 dipendenti = df_sel['Dipendente'].sum()
@@ -189,6 +191,9 @@ col3.metric("Dipendenti", f"€ {dipendenti:,.2f}")
 col4.metric("Bibite/Sorbetti", f"€ {bibite_sorbetti:,.2f}")
 col5.metric("Utile stimato", f"€ {utile:,.2f}")
 
+col6 = st.columns(6)[5]
+ingredienti_grezzi = df_sel['ingredienti_grezzi'].sum()
+col6.metric("Ingredienti Grezzi", f"€ {ingredienti_grezzi:,.2f}")
 
 
 tot_poke = df_sel['poke_totali'].sum()
@@ -283,12 +288,22 @@ with tabs[4]:
 
 
     st.header("🔥 % Ingredienti e Dipendenti")
+    st.info('Quanto incidono, in media quotidiana, i costi distribuiti degli ingredienti sul fatturato di quel giorno.')
     import plotly.graph_objects as go
     melt = df_sel[['data', '% ingredienti', '% dipendenti']].melt('data', var_name='Tipo', value_name='Percentuale')
     fig = px.line(melt, x='data', y='Percentuale', color='Tipo', markers=True)
     fig.update_layout(title="📊 Andamento % Ingredienti e Dipendenti")
     st.plotly_chart(fig, use_container_width=True)
 
+    st.subheader("💡 Confronto % ingredienti grezzi")
+    
+    show_raw = st.checkbox("Mostra anche % Ingredienti Grezzi")
+    
+    if show_raw:
+        melt = df_sel[['data', '% ingredienti', '% ingredienti grezzi']].melt('data', var_name='Tipo', value_name='Percentuale')
+        fig = px.line(melt, x='data', y='Percentuale', color='Tipo', markers=True)
+        fig.update_layout(title="📊 % Ingredienti Distribuiti vs Grezzi", yaxis_title="% sul fatturato")
+        st.plotly_chart(fig, use_container_width=True)
 
 with tabs[5]:
     st.header("📊 Confronto Annuale")
