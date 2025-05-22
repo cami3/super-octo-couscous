@@ -336,10 +336,6 @@ with tabs[7]:
 with tabs[8]:
     st.header("📦 Rifornimenti Effettivi")
 
-    # --- Session state per selezione categoria ---
-    if 'cat_sel' not in st.session_state:
-        st.session_state.cat_sel = 'Tutti'
-
     # --- Categorie ingredienti ---
     categorie = {
         'Tutti': ingred_cols,
@@ -352,13 +348,9 @@ with tabs[8]:
     }
 
     # --- Selezione categoria ---
-    cat_sel = st.selectbox(
-        "🧂 Filtra per categoria",
-        list(categorie.keys()),
-        index=list(categorie.keys()).index(st.session_state.cat_sel),
-        key="cat_sel"
-    )
-    st.session_state.cat_sel = cat_sel
+    cat_keys = list(categorie.keys())
+    default_index = cat_keys.index(st.session_state.get("cat_sel", "Tutti"))
+    cat_sel = st.selectbox("🧂 Filtra per categoria", cat_keys, index=default_index, key="cat_sel")
 
     col_sel = categorie[cat_sel]
     df_rif = df[['data'] + col_sel].copy()
@@ -401,6 +393,7 @@ with tabs[8]:
     st.plotly_chart(fig_pie, use_container_width=True)
 
     st.caption("Visualizzazione 100% data-driven basata su acquisti reali registrati nel file CSV.")
+
 
 # --- ESPORTAZIONE ---
 csv = df_sel.to_csv(index=False).encode('utf-8')
