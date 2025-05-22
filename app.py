@@ -61,6 +61,12 @@ cost_cols = ['Dipendente']
 exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data','fatturato']
 ingred_cols = [c for c in df.columns if c not in exclude]
 
+from datetime import timedelta
+
+# Min e max da dati
+min_date = df['data'].min().date()
+max_date = df['data'].max().date()
+today = max_date
 
 # Range predefiniti
 presets = {
