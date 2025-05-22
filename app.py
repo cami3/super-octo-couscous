@@ -62,17 +62,6 @@ exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['d
 ingred_cols = [c for c in df.columns if c not in exclude]
 
 
-from datetime import timedelta
-
-# Min e max da dati
-min_date = df['data'].min().date()
-max_date = df['data'].max().date()
-today = max_date
-
-# Inizializza session_state se serve
-if "date_range" not in st.session_state:
-    st.session_state["date_range"] = [min_date, max_date]
-
 # Range predefiniti
 presets = {
     "Oggi": (today, today),
@@ -81,27 +70,29 @@ presets = {
     "Tutto": (min_date, max_date)
 }
 
-# Pulsanti rapidi
+# Inizializzazione se serve
+if "date_range" not in st.session_state:
+    st.session_state["date_range"] = [min_date, max_date]
+
 preset_selection = st.radio("⏱️ Selezione rapida", options=list(presets.keys()))
 preset_start, preset_end = presets[preset_selection]
 
-# Form di selezione periodo
 with st.form("date_form"):
-    date_range = st.date_input("📅 Oppure scegli manualmente:",
-                               value=st.session_state["date_range"],
-                               min_value=min_date,
-                               max_value=max_date,
-                               key="date_range")
+    date_range = st.date_input(
+        "📅 Oppure scegli manualmente:",
+        value=st.session_state["date_range"],
+        min_value=min_date,
+        max_value=max_date,
+        key="date_range"
+    )
     submitted = st.form_submit_button("✅ Analizza periodo")
 
 if not submitted:
     st.stop()
 
-# Salva il range selezionato nel session_state
-st.session_state["date_range"] = date_range
-
-# Converte in datetime64
+# NON aggiornare più st.session_state["date_range"] a mano
 start, end = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])
+
 durata = (end - start).days + 1
 
 # Info utente
