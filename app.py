@@ -96,8 +96,8 @@ prev_end = end.replace(year=end.year - 1)
 
 df_sel = df[(df['data'] >= start) & (df['data'] <= end)]
 df_prev = df[(df['data'] >= prev_start) & (df['data'] <= prev_end)]
-df_dist['data'] = df['data']
-df_dist_sel = df_dist[(df_dist['data'] >= start) & (df_dist['data'] <= end)]
+df_dist_with_date = df[['data']].join(df_dist)
+df_dist_sel = df_dist_with_date[(df_dist_with_date['data'] >= start) & (df_dist_with_date['data'] <= end)]
 
 df_sel['poke_totali'] = df_sel[poke_cols].sum(axis=1)
 
@@ -230,6 +230,10 @@ with tabs[5]:
     }))
 
 with tabs[6]:
+    if df_sel.empty:
+        st.warning("⚠️ Nessun dato nel periodo selezionato.")
+        st.stop()
+
     st.header("⚠️ Giornate da monitorare")
     critici['Attenzione'] = ""
     critici.loc[critici['% ingredienti'] >= 25, 'Attenzione'] += "🧂 Ingredienti alti  "
