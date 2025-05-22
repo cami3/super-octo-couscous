@@ -149,11 +149,6 @@ for ing in ingred_cols:
 
     df_dist[ing] = arr
 
-print("Somma ingredienti grezzi:", df[ingred_cols].sum().sum())
-print("Somma ingredienti spalmati:", df_dist.sum().sum())
-print("Somma spalmati in df_sel:", df_sel['totale_ingredienti'].sum())
-print("Somma grezzi in df_sel:", df_sel['ingredienti_grezzi'].sum())
-
 
 
 def safe_pct(cost, rev):
@@ -186,6 +181,11 @@ fig = px.bar(top_10_df, x='Ingrediente', y='Spesa Media Giornaliera (€)', text
 fig.update_traces(texttemplate='€ %{text:.2f}', textposition='outside')
 fig.update_layout(title="🥇 Top 10 Ingredienti – Spesa Media Giornaliera", yaxis_title="€ al giorno")
 st.plotly_chart(fig, use_container_width=True)
+
+print("Somma ingredienti grezzi:", df[ingred_cols].sum().sum())
+print("Somma ingredienti spalmati:", df_dist.sum().sum())
+print("Somma spalmati in df_sel:", df_sel['totale_ingredienti'].sum())
+print("Somma grezzi in df_sel:", df_sel['ingredienti_grezzi'].sum())
 
 
 # --- KPI ---
