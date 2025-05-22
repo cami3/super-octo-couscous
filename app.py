@@ -140,9 +140,11 @@ for ing in ingred_cols:
         last_date = s.iloc[-1]['data']
         last_value = s.iloc[-1][ing]
         final_day = df['data'].max()
-        days = (final_day - last_date).days + 1  # includi anche il giorno stesso
+        # ✅ CORRETTO: spalma solo sui giorni successivi
+        days = (final_day - last_date).days
         if days > 0:
-            arr[(df['data'] >= last_date) & (df['data'] <= final_day)] += last_value / days
+            arr[(df['data'] > last_date) & (df['data'] <= final_day)] += last_value / days
+
 
 
     df_dist[ing] = arr
