@@ -149,6 +149,13 @@ for ing in ingred_cols:
 
     df_dist[ing] = arr
 
+print("Somma ingredienti grezzi:", df[ingred_cols].sum().sum())
+print("Somma ingredienti spalmati:", df_dist.sum().sum())
+print("Somma spalmati in df_sel:", df_sel['totale_ingredienti'].sum())
+print("Somma grezzi in df_sel:", df_sel['ingredienti_grezzi'].sum())
+
+
+
 def safe_pct(cost, rev):
     return cost/rev*100 if rev > 0 else 0
 
