@@ -62,6 +62,7 @@ exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['d
 ingred_cols = [c for c in df.columns if c not in exclude]
 
 # --- DISTRIBUZIONE COSTI ---
+# --- DISTRIBUZIONE COSTI CORRETTA ---
 df_dist = pd.DataFrame(index=df.index)
 for ing in ingred_cols:
     s = df[['data', ing]].dropna()
@@ -72,6 +73,16 @@ for ing in ingred_cols:
         days = (b - a).days
         if days > 0:
             arr[(df['data'] >= a) & (df['data'] < b)] += s.iloc[i][ing] / days
+
+    # ✅ Distribuzione dopo l’ultimo acquisto fino alla fine
+    if not s.empty:
+        last_date = s.iloc[-1]['data']
+        last_value = s.iloc[-1][ing]
+        final_day = df['data'].max()
+        days = (final_day - last_date).days
+        if days > 0:
+            arr[(df['data'] >= last_date)] += last_value / days
+
     df_dist[ing] = arr
 
 def safe_pct(cost, rev):
