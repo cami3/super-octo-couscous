@@ -200,11 +200,11 @@ with tabs[6]:
     st.header("⚠️ Giornate da monitorare")
     critici['Attenzione'] = ""
     critici.loc[critici['% ingredienti'] >= 25, 'Attenzione'] += "🧂 Ingredienti alti  "
-    critici.loc[critici['% ingredienti'] < 25, 'Perfetto'] += "🧂 Ingredienti OK  "
+    critici.loc[critici['% ingredienti'] < 25, 'Attenzione'] += "🧂 Ingredienti OK  "
     critici.loc[critici['% dipendenti'] >= 20, 'Attenzione'] += "👥 Dipendenti alti  "
-    critici.loc[critici['% dipendenti'] < 20, 'Perfetto'] += "👥 Dipendenti OK  "
+    critici.loc[critici['% dipendenti'] < 20, 'Attenzione'] += "👥 Dipendenti OK  "
     critici.loc[critici['fatturato'] <= 450, 'Attenzione'] += "📉 Fatturato basso"
-    critici.loc[critici['fatturato'] > 450, 'Perfetto'] += "📉 Fatturato OK"
+    critici.loc[critici['fatturato'] > 450, 'Attenzione'] += "📉 Fatturato OK"
 
     # Definisci una funzione di stile
     def highlight_perfetto(row):
