@@ -146,7 +146,10 @@ else:
     st.success("🟢 Equilibrio OK nel periodo.")
 
 df_sel['utile_giornaliero'] = df_sel['fatturato'] - df_sel['totale_ingredienti'] - df_sel['Dipendente'] - df_sel['bibite_sorbetti']
-df_sel['margine_per_poke'] = df_sel['utile_giornaliero'] / df_sel['poke_totali']
+df_sel['margine_per_poke'] = df_sel.apply(
+    lambda r: r['utile_giornaliero'] / r['poke_totali'] if r['poke_totali'] > 0 else None, axis=1
+)
+
 top_days = df_sel.sort_values('margine_per_poke', ascending=False).head(5)
 
 st.subheader("💰 Giorni migliori per margine per poke")
