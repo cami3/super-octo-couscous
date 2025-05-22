@@ -61,8 +61,6 @@ cost_cols = ['Dipendente']
 exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data','fatturato']
 ingred_cols = [c for c in df.columns if c not in exclude]
 
-df['ingredienti_grezzi'] = df[ingred_cols].sum(axis=1)
-df['% ingredienti grezzi'] = df.apply(lambda r: safe_pct(r['ingredienti_grezzi'], r['fatturato']), axis=1)
 
 
 # Min e max da dati
@@ -157,6 +155,9 @@ df['% dipendenti'] = df.apply(lambda r: safe_pct(r['Dipendente'], r['fatturato']
 df['poke_totali'] = df[poke_cols].sum(axis=1)
 df['extra_totali'] = df[extra_cols].sum(axis=1)
 df['bibite_sorbetti'] = df[bibite_cols + sorbetti_cols].sum(axis=1)
+
+df['ingredienti_grezzi'] = df[ingred_cols].sum(axis=1)
+df['% ingredienti grezzi'] = df.apply(lambda r: safe_pct(r['ingredienti_grezzi'], r['fatturato']), axis=1)
 
 
 df_sel = df[(df['data'] >= start) & (df['data'] <= end)]
