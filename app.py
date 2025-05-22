@@ -133,7 +133,8 @@ for ing in ingred_cols:
         a, b = s.iloc[i]['data'], s.iloc[i+1]['data']
         days = (b - a).days
         if days > 0:
-            arr[(df['data'] >= a) & (df['data'] < b)] += s.iloc[i][ing] / days
+            arr[(df['data'] >= a) & (df['data'] <= b)] += s.iloc[i][ing] / (days + 1)
+
 
     # ✅ Distribuzione dopo l’ultimo acquisto fino alla fine
     if not s.empty:
@@ -143,7 +144,8 @@ for ing in ingred_cols:
         # ✅ CORRETTO: spalma solo sui giorni successivi
         days = (final_day - last_date).days
         if days > 0:
-            arr[(df['data'] > last_date) & (df['data'] <= final_day)] += last_value / days
+            arr[(df['data'] >= last_date) & (df['data'] <= final_day)] += last_value / (days + 1)
+
 
 
 
