@@ -84,23 +84,56 @@ df['poke_totali'] = df[poke_cols].sum(axis=1)
 df['extra_totali'] = df[extra_cols].sum(axis=1)
 df['bibite_sorbetti'] = df[bibite_cols + sorbetti_cols].sum(axis=1)
 
-min_date = pd.to_datetime(df['data'].min())
-max_date = pd.to_datetime(df['data'].max())
+from datetime import date, timedelta
+
+# Date iniziali da df
+min_date = df['data'].min().date()
+max_date = df['data'].max().date()
+today = max_date
 
 with st.form("date_form"):
-    start, end = st.date_input("📅 Seleziona periodo", [min_date, max_date], min_value=min_date, max_value=max_date)
-    submitted = st.form_submit_button("📊 Analizza")
+    st.markdown("### 📅 Seleziona un periodo")
 
-if submitted:
-    st.info(f"🔎 Hai selezionato il periodo: **{start.strftime('%d/%m/%Y')} – {end.strftime('%d/%m/%Y')}**")
+    # Input manuale
+    start, end = st.date_input("Periodo personalizzato", [min_date, max_date], min_value=min_date, max_value=max_date)
+
+    # Pulsanti rapidi
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        if st.form_submit_button("📍 Oggi"):
+            start, end = today, today
+    with col2:
+        if st.form_submit_button("🗓️ Ultimi 7 giorni"):
+            start, end = today - timedelta(days=6), today
+    with col3:
+        if st.form_submit_button("📆 Ultimi 30 giorni"):
+            start, end = today - timedelta(days=29), today
+    with col4:
+        if st.form_submit_button("📊 Tutto"):
+            start, end = min_date, max_date
+
+    # Messaggio informativo
+    st.caption("📌 Se le date nel calendario appaiono in formato **YYYY/MM/DD**, verifica che la lingua del browser sia impostata su **Italiano**.")
+
+    # Visualizzazione italiana + durata
+    durata = (end - start).days + 1
+    st.info(f"🔎 Periodo selezionato: **{start.strftime('%d/%m/%Y')} → {end.strftime('%d/%m/%Y')}** ({durata} giorni)")
+
+    # Alert se troppo corto
+    if durata < 3:
+        st.warning("⚠️ Il periodo selezionato è molto breve. I dati potrebbero essere poco significativi.")
+
+    submitted = st.form_submit_button("✅ Analizza il periodo")
 
 if not submitted:
     st.stop()
 
-
-start, end = pd.to_datetime(start), pd.to_datetime(end)
+# Converti in datetime completo per i filtri successivi
+start = pd.to_datetime(start)
+end = pd.to_datetime(end)
 prev_start = start.replace(year=start.year - 1)
 prev_end = end.replace(year=end.year - 1)
+
 
 df_sel = df[(df['data'] >= start) & (df['data'] <= end)]
 df_prev = df[(df['data'] >= prev_start) & (df['data'] <= prev_end)]
