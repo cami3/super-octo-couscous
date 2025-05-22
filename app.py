@@ -199,10 +199,24 @@ with tabs[5]:
 with tabs[6]:
     st.header("⚠️ Giornate da monitorare")
     critici['Attenzione'] = ""
-    critici.loc[critici['% ingredienti'] > 25, 'Attenzione'] += "🧂 Ingredienti alti  "
-    critici.loc[critici['% dipendenti'] > 20, 'Attenzione'] += "👥 Dipendenti alti  "
-    critici.loc[critici['fatturato'] < 450, 'Attenzione'] += "📉 Fatturato basso"
-    st.dataframe(critici[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1))
+    critici.loc[critici['% ingredienti'] >= 25, 'Attenzione'] += "🧂 Ingredienti alti  "
+    critici.loc[critici['% ingredienti'] < 25, 'Perfetto'] += "🧂 Ingredienti OK  "
+    critici.loc[critici['% dipendenti'] >= 20, 'Attenzione'] += "👥 Dipendenti alti  "
+    critici.loc[critici['% dipendenti'] < 20, 'Perfetto'] += "👥 Dipendenti OK  "
+    critici.loc[critici['fatturato'] <= 450, 'Attenzione'] += "📉 Fatturato basso"
+    critici.loc[critici['fatturato'] > 450, 'Perfetto'] += "📉 Fatturato OK"
+
+    # Definisci una funzione di stile
+    def highlight_perfetto(row):
+        if row['Attenzione'] == "":
+            return ['background-color: #d4edda'] * len(row)  # verde chiaro
+        else:
+            return [''] * len(row)
+    
+    styled_df = critici[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1).style.apply(highlight_perfetto, axis=1)
+    st.write(styled_df.to_html(escape=False), unsafe_allow_html=True)
+
+    #st.dataframe(critici[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1))
 
 with tabs[7]:
     st.header("ℹ️ Aiuto e Note")
