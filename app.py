@@ -203,19 +203,13 @@ with tabs[4]:
             st.plotly_chart(px.area(melt, x='data', y='Euro', color='Ingrediente'), use_container_width=True)
 
 
+    st.header("🔥 % Ingredienti e Dipendenti")
     import plotly.graph_objects as go
-    
-    heat_df = df_sel[['data', '% ingredienti', '% dipendenti']].copy()
-    heat_df['data'] = heat_df['data'].dt.strftime('%d-%m')
-    
-    fig = go.Figure(data=go.Heatmap(
-        z=heat_df[['% ingredienti', '% dipendenti']].T.values,
-        x=heat_df['data'],
-        y=['% Ingredienti', '% Dipendenti'],
-        colorscale='YlOrRd'
-    ))
-    fig.update_layout(title="🔥 Heatmap % Ingredienti e Dipendenti", xaxis_title="Data", yaxis_title="Metrica")
+    melt = df_sel[['data', '% ingredienti', '% dipendenti']].melt('data', var_name='Tipo', value_name='Percentuale')
+    fig = px.line(melt, x='data', y='Percentuale', color='Tipo', markers=True)
+    fig.update_layout(title="📊 Andamento % Ingredienti e Dipendenti")
     st.plotly_chart(fig, use_container_width=True)
+
 
 with tabs[5]:
     st.header("📊 Confronto Annuale")
