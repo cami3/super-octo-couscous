@@ -334,7 +334,7 @@ with tabs[7]:
 """)
 
 with tabs[8]:
-    st.header("\ud83d\udce6 Rifornimenti Effettivi")
+    st.header("Rifornimenti Effettivi")
 
     # --- Categorie ingredienti ---
     categorie = {
