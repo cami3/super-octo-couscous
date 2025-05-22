@@ -216,6 +216,10 @@ with tabs[6]:
    #  styled_df = critici[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1).style.apply(highlight_perfetto, axis=1)
    #  st.write(styled_df.to_html(escape=False), unsafe_allow_html=True)
 # Colonna Attenzione
+    with tabs[6]:
+    st.header("⚠️ Giornate da monitorare")
+
+    # Costruzione colonna Attenzione
     critici['Attenzione'] = ""
     critici.loc[critici['% ingredienti'] >= 25, 'Attenzione'] += "🧂 Ingredienti alti  "
     critici.loc[critici['% ingredienti'] < 25, 'Attenzione'] += "🧂 Ingredienti OK  "
@@ -224,24 +228,30 @@ with tabs[6]:
     critici.loc[critici['fatturato'] <= 450, 'Attenzione'] += "📉 Fatturato basso"
     critici.loc[critici['fatturato'] > 450, 'Attenzione'] += "📉 Fatturato OK"
 
-    # Costruzione tabella HTML con righe verdi se tutto è OK
-    table_html = """
-    <style>
-        table {
+    # CSS SEPARATO
+    st.markdown(
+        """
+        <style>
+        .styled-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 14px;
         }
-        th, td {
+        .styled-table th, .styled-table td {
             padding: 6px 10px;
             border: 1px solid #ccc;
             text-align: left;
         }
-        .perfetto {
+        .styled-table .perfetto {
             background-color: #d4edda;
         }
-    </style>
-    <table>
+        </style>
+        """, unsafe_allow_html=True
+    )
+
+    # HTML puro con classe
+    table_html = """
+    <table class="styled-table">
         <tr>
             <th>Data</th>
             <th>Fatturato</th>
@@ -252,12 +262,9 @@ with tabs[6]:
     """
 
     for _, row in critici.iterrows():
-        is_perfect = all([
-            "alti" not in row['Attenzione'],
-            "basso" not in row['Attenzione']
-        ])
+        is_perfect = "alti" not in row['Attenzione'] and "basso" not in row['Attenzione']
         row_class = "perfetto" if is_perfect else ""
-        table_html += """
+        table_html += f"""
         <tr class="{row_class}">
             <td>{row['data']}</td>
             <td>{row['fatturato']}</td>
@@ -270,6 +277,7 @@ with tabs[6]:
     table_html += "</table>"
 
     st.markdown(table_html, unsafe_allow_html=True)
+
     #st.dataframe(critici[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1))
 
 with tabs[7]:
