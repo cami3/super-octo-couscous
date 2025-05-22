@@ -68,40 +68,52 @@ min_date = df['data'].min().date()
 max_date = df['data'].max().date()
 today = max_date
 
-# Range predefiniti
+# Preset disponibili
 presets = {
-    "Oggi": (today, today),
     "Ultimi 7 giorni": (today - timedelta(days=6), today),
     "Ultimi 30 giorni": (today - timedelta(days=29), today),
-    "Tutto": (min_date, max_date)
+    "Tutto il periodo": (min_date, max_date)
 }
 
-# Inizializzazione se serve
+# Fasce annuali dinamiche
+for year in sorted(df['data'].dt.year.unique()):
+    year_start = date(year, 1, 1)
+    year_end = date(year, 12, 31)
+    presets[f"{year} intero"] = (max(min_date, year_start), min(max_date, year_end))
+
+# Inizializzazione solo alla prima esecuzione
 if "date_range" not in st.session_state:
     st.session_state["date_range"] = [min_date, max_date]
 
-preset_selection = st.radio("⏱️ Selezione rapida", options=list(presets.keys()))
+# Selezione rapida (modifica lo stato solo se è cambiato)
+preset_selection = st.radio("⏱️ Selezione rapida", options=list(presets.keys()), index=list(presets).index("Tutto il periodo"))
 preset_start, preset_end = presets[preset_selection]
 
+# Aggiorna lo stato solo se diverso dal precedente
+if st.session_state["date_range"] != [preset_start, preset_end]:
+    st.session_state["date_range"] = [preset_start, preset_end]
+
+# Form con il valore sempre aggiornato da session_state
 with st.form("date_form"):
-    date_range = st.date_input(
+    _ = st.date_input(
         "📅 Oppure scegli manualmente:",
-        value=st.session_state["date_range"],
         min_value=min_date,
         max_value=max_date,
         key="date_range"
     )
     submitted = st.form_submit_button("✅ Analizza periodo")
 
-if not submitted:
+# Se non hai mai cliccato il bottone ma lo state è già pieno, prosegui comunque
+if not submitted and st.session_state.get("analisi_avviata") is not True:
     st.stop()
+else:
+    st.session_state["analisi_avviata"] = True
 
-# NON aggiornare più st.session_state["date_range"] a mano
-start, end = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])
+# Estrai date dal session_state
+start, end = pd.to_datetime(st.session_state["date_range"][0]), pd.to_datetime(st.session_state["date_range"][1])
 
+# Info
 durata = (end - start).days + 1
-
-# Info utente
 st.info(f"📆 Periodo selezionato: **{start.strftime('%d/%m/%Y')} → {end.strftime('%d/%m/%Y')}** ({durata} giorni)")
 if durata < 3:
     st.warning("⚠️ Periodo breve: potrebbero esserci pochi dati.")
