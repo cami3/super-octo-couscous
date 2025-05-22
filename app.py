@@ -131,10 +131,11 @@ for ing in ingred_cols:
     arr = pd.Series(0.0, index=df.index)
     for i in range(len(s) - 1):
         a, b = s.iloc[i]['data'], s.iloc[i+1]['data']
-        days = (b - a).days
+        days = (b - a).days + 1  # includi anche il giorno b-1
         if days > 0:
-            # Spalma da giorno a (incluso) fino a giorno b (escluso)
-            arr[(df['data'] >= a) & (df['data'] < b)] += s.iloc[i][ing] / days
+            intervallo = (df['data'] >= a) & (df['data'] <= b - pd.Timedelta(days=1))
+            arr[intervallo] += s.iloc[i][ing] / (days - 1)  # dividiamo per giorni effettivi
+
 
 
     # ✅ Distribuzione dopo l’ultimo acquisto fino alla fine
