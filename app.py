@@ -102,6 +102,7 @@ df_dist_sel = df_dist[(df_dist['data'] >= start) & (df_dist['data'] <= end)]
 df_sel['poke_totali'] = df_sel[poke_cols].sum(axis=1)
 
 st.header("🥇 Top 10 ingredienti per spesa media giornaliera")
+top_10 = df_dist_sel[ingred_cols].mean().sort_values(ascending=False).head(10)
 
 top_10_df = top_10.reset_index()
 top_10_df.columns = ['Ingrediente', 'Spesa Media Giornaliera (€)']
