@@ -46,7 +46,7 @@ if not uploaded:
 
 df = pd.read_csv(uploaded, sep=';').dropna(how='all')
 df['data'] = pd.to_datetime(df['data'], dayfirst=True, errors='coerce')
-df = df.dropna(subset=['data', 'fatturato'], how='any')  # elimina righe incomplete
+# df = df.dropna(subset=['data', 'fatturato'], how='any')  # elimina righe incomplete
 
 for col in df.columns:
     if col != 'data':
@@ -157,7 +157,8 @@ def safe_pct(cost, rev):
 df['totale_ingredienti'] = df_dist.sum(axis=1)
 df['% ingredienti'] = df.apply(lambda r: safe_pct(r['totale_ingredienti'], r['fatturato']), axis=1)
 df['% dipendenti'] = df.apply(lambda r: safe_pct(r['Dipendente'], r['fatturato']), axis=1)
-df['poke_totali'] = df[poke_cols].sum(axis=1)
+df['poke_totali'] = df[poke_cols].sum(axis=1).fillna(0)
+
 df['extra_totali'] = df[extra_cols].sum(axis=1)
 df['bibite_sorbetti'] = df[bibite_cols + sorbetti_cols].sum(axis=1)
 
@@ -170,6 +171,7 @@ df_prev = df[(df['data'] >= prev_start) & (df['data'] <= prev_end)]
 df_dist_with_date = df[['data']].join(df_dist)
 df_dist_sel = df_dist_with_date[(df_dist_with_date['data'] >= start) & (df_dist_with_date['data'] <= end)]
 
+df_sel['fatturato'] = df_sel['fatturato'].fillna(0)
 df_sel['poke_totali'] = df_sel[poke_cols].sum(axis=1)
 
 st.header("🥇 Top 10 ingredienti per spesa media giornaliera")
