@@ -46,7 +46,8 @@ if not uploaded:
 
 df = pd.read_csv(uploaded, sep=';').dropna(how='all')
 df['data'] = pd.to_datetime(df['data'], dayfirst=True, errors='coerce')
-df = df.dropna(subset=['data', 'fatturato'])
+df = df.dropna(subset=['data', 'fatturato'], how='any')  # elimina righe incomplete
+
 for col in df.columns:
     if col != 'data':
         df[col] = pd.to_numeric(df[col], errors='coerce')
@@ -98,6 +99,10 @@ df_prev = df[(df['data'] >= prev_start) & (df['data'] <= prev_end)]
 df_dist['data'] = df['data']
 df_dist_sel = df_dist[(df_dist['data'] >= start) & (df_dist['data'] <= end)]
 
+st.header("🥇 Top 10 ingredienti per spesa media giornaliera")
+top_10 = df_dist_sel[ingred_cols].mean().sort_values(ascending=False).head(10)
+st.bar_chart(top_10)
+
 # --- KPI ---
 st.header("📌 Riepilogo operativo")
 col1, col2, col3, col4, col5 = st.columns(5)
@@ -137,6 +142,13 @@ elif perc > 50:
     st.warning("🟠 Molte giornate sotto soglia: valuta interventi.")
 else:
     st.success("🟢 Equilibrio OK nel periodo.")
+
+df_sel['utile_giornaliero'] = df_sel['fatturato'] - df_sel['totale_ingredienti'] - df_sel['Dipendente'] - df_sel['bibite_sorbetti']
+df_sel['margine_per_poke'] = df_sel['utile_giornaliero'] / df_sel['poke_totali']
+top_days = df_sel.sort_values('margine_per_poke', ascending=False).head(5)
+
+st.subheader("💰 Giorni migliori per margine per poke")
+st.dataframe(top_days[['data', 'margine_per_poke', 'fatturato', 'poke_totali']].round(2))
 
 # --- TABS ---
 tabs = st.tabs(["📈 Vendite", "🍱 Extra", "🥤 Bibite", "🍧 Sorbetti", "🍚 Ingredienti", "📊 Annuale", "⚠️ Giornate Critiche", "ℹ️ Aiuto"])
@@ -178,6 +190,21 @@ with tabs[4]:
             melt = df_dist_sel[['data'] + validi].melt('data', var_name='Ingrediente', value_name='Euro')
             st.plotly_chart(px.area(melt, x='data', y='Euro', color='Ingrediente'), use_container_width=True)
 
+
+    import plotly.graph_objects as go
+    
+    heat_df = df_sel[['data', '% ingredienti', '% dipendenti']].copy()
+    heat_df['data'] = heat_df['data'].dt.strftime('%d-%m')
+    
+    fig = go.Figure(data=go.Heatmap(
+        z=heat_df[['% ingredienti', '% dipendenti']].T.values,
+        x=heat_df['data'],
+        y=['% Ingredienti', '% Dipendenti'],
+        colorscale='YlOrRd'
+    ))
+    fig.update_layout(title="🔥 Heatmap % Ingredienti e Dipendenti", xaxis_title="Data", yaxis_title="Metrica")
+    st.plotly_chart(fig, use_container_width=True)
+
 with tabs[5]:
     st.header("📊 Confronto Annuale")
     df['anno'] = df['data'].dt.year
@@ -200,25 +227,32 @@ with tabs[6]:
     st.header("⚠️ Giornate da monitorare")
     critici['Attenzione'] = ""
     critici.loc[critici['% ingredienti'] >= 25, 'Attenzione'] += "🧂 Ingredienti alti  "
-   #  critici.loc[critici['% ingredienti'] < 25, 'Attenzione'] += "🧂 Ingredienti OK  "
     critici.loc[critici['% dipendenti'] >= 20, 'Attenzione'] += "👥 Dipendenti alti  "
-   #  critici.loc[critici['% dipendenti'] < 20, 'Attenzione'] += "👥 Dipendenti OK  "
     critici.loc[critici['fatturato'] <= 450, 'Attenzione'] += "📉 Fatturato basso"
-    #critici.loc[critici['fatturato'] > 450, 'Attenzione'] += "📉 Fatturato OK"
-
-    # Definisci una funzione di stile
-   #  def highlight_perfetto(row):
-   #      if row['Attenzione'] == "":
-   #          return ['background-color: #d4edda'] * len(row)  # verde chiaro
-   #      else:
-   #          return [''] * len(row)
     
-   #  styled_df = critici[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1).style.apply(highlight_perfetto, axis=1)
-   #  st.write(styled_df.to_html(escape=False), unsafe_allow_html=True)
-# Colonna Attenzione
+    st.markdown("""
+    <style>
+    .green-row td {
+        background-color: #d4edda !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     
+    critici['Perfetto'] = (critici['Attenzione'] == "")
+    table_html = """
+    <table>
+    <tr><th>Data</th><th>Fatturato</th><th>% Ingredienti</th><th>% Dipendenti</th><th>Attenzione</th></tr>
+    """
+    
+    for _, r in critici.iterrows():
+        cls = 'green-row' if r['Perfetto'] else ''
+        table_html += f"<tr class='{cls}'><td>{r['data'].date()}</td><td>{r['fatturato']:.2f}</td><td>{r['% ingredienti']:.1f}</td><td>{r['% dipendenti']:.1f}</td><td>{r['Attenzione']}</td></tr>"
+    
+    table_html += "</table>"
+    st.markdown(table_html, unsafe_allow_html=True)
 
-    st.dataframe(critici[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1))
+
+    #st.dataframe(critici[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1))
 
 with tabs[7]:
     st.header("ℹ️ Aiuto e Note")
