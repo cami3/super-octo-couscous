@@ -131,10 +131,10 @@ for ing in ingred_cols:
     arr = pd.Series(0.0, index=df.index)
     for i in range(len(s) - 1):
         a, b = s.iloc[i]['data'], s.iloc[i+1]['data']
-        days = (b - a).days + 1  # includi anche il giorno b-1
-        if days > 0:
-            intervallo = (df['data'] >= a) & (df['data'] <= b - pd.Timedelta(days=1))
-            arr[intervallo] += s.iloc[i][ing] / (days - 1)  # dividiamo per giorni effettivi
+        giorni = (b - a).days
+        if giorni > 0:
+            intervallo = (df['data'] >= a) & (df['data'] < b)  # include 'a', esclude 'b'
+            arr[intervallo] += s.iloc[i][ing] / giorni
 
 
 
@@ -144,10 +144,9 @@ for ing in ingred_cols:
         last_value = s.iloc[-1][ing]
         final_day = df['data'].max()
         # ✅ CORRETTO: spalma solo sui giorni successivi
-        days = (final_day - last_date).days
-        # Ultimo acquisto: spalma solo *dopo* il giorno dell'acquisto
-        if days > 0:
-            arr[(df['data'] > last_date) & (df['data'] <= final_day)] += last_value / days
+        giorni_finali = (final_day - last_date).days + 1
+        if giorni_finali > 0:
+            arr[(df['data'] >= last_date) & (df['data'] <= final_day)] += last_value / giorni_finali
 
 
 
