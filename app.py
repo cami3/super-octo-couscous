@@ -131,10 +131,11 @@ for ing in ingred_cols:
     arr = pd.Series(0.0, index=df.index)
     for i in range(len(s) - 1):
         a, b = s.iloc[i]['data'], s.iloc[i+1]['data']
-        intervallo = (df['data'] >= a) & (df['data'] < b)
-        giorni_utili = intervallo.sum()
-        if giorni_utili > 0:
-            arr[intervallo] += s.iloc[i][ing] / giorni_utili
+        if a.year == b.year:
+            intervallo = (df['data'] >= a) & (df['data'] < b) & (df['aperto'])
+            giorni_utili = intervallo.sum()
+            if giorni_utili:
+                arr[intervallo] += s.iloc[i][ing] / giorni_utili
 
 
 
