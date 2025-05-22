@@ -134,6 +134,12 @@ col1.metric("Ricavo Medio per Poke", f"€ {fatturato / tot_poke:.2f}" if tot_po
 col2.metric("Extra per 10 Poke", f"{(tot_extra / tot_poke) * 10:.1f}" if tot_poke > 0 else "N/A")
 col3.metric("Costo Medio per Poke", f"€ {ingredienti / tot_poke:.2f}" if tot_poke > 0 else "N/A")
 
+if tot_poke > 0:
+    costo_medio_ingredienti_per_poke = ingredienti / tot_poke
+    st.metric("Costo Medio Ingredienti per Poke", f"€ {costo_medio_ingredienti_per_poke:.2f}")
+else:
+    st.metric("Costo Medio Ingredienti per Poke", "N/A")
+
 # --- INTERPRETAZIONE ---
 st.header("🧠 Lettura sintetica del periodo")
 giorni = len(df_sel)
