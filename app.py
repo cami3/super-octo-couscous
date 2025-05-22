@@ -86,47 +86,36 @@ df['bibite_sorbetti'] = df[bibite_cols + sorbetti_cols].sum(axis=1)
 
 from datetime import date, timedelta
 
-# Date iniziali da df
+
 min_date = df['data'].min().date()
 max_date = df['data'].max().date()
 today = max_date
 
+# Range predefiniti
+presets = {
+    "Oggi": (today, today),
+    "Ultimi 7 giorni": (today - timedelta(days=6), today),
+    "Ultimi 30 giorni": (today - timedelta(days=29), today),
+    "Tutto": (min_date, max_date)
+}
+
+# Pulsanti rapidi (fuori dal form!)
+preset_selection = st.radio("⏱️ Selezione rapida", options=list(presets.keys()))
+preset_start, preset_end = presets[preset_selection]
+
 with st.form("date_form"):
-    st.markdown("### 📅 Seleziona un periodo")
-
-    # Input manuale
-    start, end = st.date_input("Periodo personalizzato", [min_date, max_date], min_value=min_date, max_value=max_date)
-
-    # Pulsanti rapidi
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        if st.form_submit_button("📍 Oggi"):
-            start, end = today, today
-    with col2:
-        if st.form_submit_button("🗓️ Ultimi 7 giorni"):
-            start, end = today - timedelta(days=6), today
-    with col3:
-        if st.form_submit_button("📆 Ultimi 30 giorni"):
-            start, end = today - timedelta(days=29), today
-    with col4:
-        if st.form_submit_button("📊 Tutto"):
-            start, end = min_date, max_date
-
-    # Messaggio informativo
-    st.caption("📌 Se le date nel calendario appaiono in formato **YYYY/MM/DD**, verifica che la lingua del browser sia impostata su **Italiano**.")
-
-    # Visualizzazione italiana + durata
-    durata = (end - start).days + 1
-    st.info(f"🔎 Periodo selezionato: **{start.strftime('%d/%m/%Y')} → {end.strftime('%d/%m/%Y')}** ({durata} giorni)")
-
-    # Alert se troppo corto
-    if durata < 3:
-        st.warning("⚠️ Il periodo selezionato è molto breve. I dati potrebbero essere poco significativi.")
-
-    submitted = st.form_submit_button("✅ Analizza il periodo")
-
+    start, end = st.date_input("📅 Oppure scegli manualmente:", [preset_start, preset_end], min_value=min_date, max_value=max_date)
+    submitted = st.form_submit_button("✅ Analizza periodo")
 if not submitted:
     st.stop()
+
+# Mostra il periodo
+durata = (end - start).days + 1
+st.info(f"📆 Periodo selezionato: **{start.strftime('%d/%m/%Y')} → {end.strftime('%d/%m/%Y')}** ({durata} giorni)")
+
+if durata < 3:
+    st.warning("⚠️ Periodo breve: potrebbero esserci pochi dati.")
+
 
 # Converti in datetime completo per i filtri successivi
 start = pd.to_datetime(start)
