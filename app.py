@@ -125,14 +125,7 @@ col2.metric("Ingredienti", f"€ {ingredienti:,.2f}")
 col3.metric("Dipendenti", f"€ {dipendenti:,.2f}")
 col4.metric("Bibite/Sorbetti", f"€ {bibite_sorbetti:,.2f}")
 col5.metric("Utile stimato", f"€ {utile:,.2f}")
-costi_fissi = 300  # puoi aggiornarlo da una variabile laterale
-ricavo_medio_poke = fatturato / tot_poke if tot_poke > 0 else 0
 
-if ricavo_medio_poke > 0:
-    poke_break_even = costi_fissi / ricavo_medio_poke
-    st.metric("📈 Break-even Poke (stima)", f"{poke_break_even:.1f} poke")
-else:
-    st.metric("📈 Break-even Poke (stima)", "N/A")
 
 
 tot_poke = df_sel['poke_totali'].sum()
@@ -148,6 +141,14 @@ if tot_poke > 0:
 else:
     st.metric("Costo Medio Ingredienti per Poke", "N/A")
 
+costi_fissi = 300  # puoi aggiornarlo da una variabile laterale
+ricavo_medio_poke = fatturato / tot_poke if tot_poke > 0 else 0
+
+if ricavo_medio_poke > 0:
+    poke_break_even = costi_fissi / ricavo_medio_poke
+    st.metric("📈 Break-even Poke (stima)", f"{poke_break_even:.1f} poke")
+else:
+    st.metric("📈 Break-even Poke (stima)", "N/A")
 # --- INTERPRETAZIONE ---
 st.header("🧠 Lettura sintetica del periodo")
 giorni = len(df_sel)
