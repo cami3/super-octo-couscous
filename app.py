@@ -53,7 +53,8 @@ for col in df.columns:
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
 poke_cols = ['poke_reglular','poke_maxi','poke_baby','fruit_bowl', 'poke_veggy']
-extra_cols = ['Avocado_venduto','Feta_venduto','Philad_venduto','Gomawak_venduto', 'Sorbetti_venduti']
+extra_cols = ['Avocado_venduto','Feta_venduto','Philad_venduto','Gomawak_venduto']
+sorbetti_pezzi_col = ['Sorbetti_venduti']
 bibite_cols = ['Acqua nat','Acqua gas','Coca cola','Coca zero','corona','ichnusa','fanta','Estathe limone','Estathe pesca']
 sorbetti_cols = ['Sorbetto limone','Sorbetto mela','Sorbetto mango']
 cost_cols = ['Dipendente']
@@ -199,6 +200,11 @@ with tabs[3]:
     st.header("🍧 Sorbetti (costi)")
     melt = df_sel[['data'] + sorbetti_cols].melt('data', var_name='Gusto', value_name='Euro')
     st.plotly_chart(px.bar(melt, x='data', y='Euro', color='Gusto'), use_container_width=True)
+    
+    st.subheader("🍧 Sorbetti venduti (in pezzi)")
+    fig = px.line(df_sel, x='data', y='Sorbetti_venduti', markers=True)
+    fig.update_layout(yaxis_title="Pezzi", title="📊 Quantità di Sorbetti venduti")
+    st.plotly_chart(fig, use_container_width=True)
 
 with tabs[4]:
     st.header("🍚 Ingredienti per Categoria")
