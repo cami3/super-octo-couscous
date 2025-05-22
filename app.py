@@ -51,8 +51,8 @@ for col in df.columns:
     if col != 'data':
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
-poke_cols = ['poke_reglular','poke_maxi','poke_baby','fruit_bowl']
-extra_cols = ['Avocado_venduto','Feta_venduto','Philad_venduto','Gomawak_venduto']
+poke_cols = ['poke_reglular','poke_maxi','poke_baby','fruit_bowl', 'poke_veggy']
+extra_cols = ['Avocado_venduto','Feta_venduto','Philad_venduto','Gomawak_venduto', 'Sorbetti_venduti']
 bibite_cols = ['Acqua nat','Acqua gas','Coca cola','Coca zero','corona','ichnusa','fanta','Estathe limone','Estathe pesca']
 sorbetti_cols = ['Sorbetto limone','Sorbetto mela','Sorbetto mango']
 cost_cols = ['Dipendente']
@@ -198,6 +198,24 @@ with tabs[5]:
 
 with tabs[6]:
     st.header("⚠️ Giornate da monitorare")
+    # critici['Attenzione'] = ""
+    # critici.loc[critici['% ingredienti'] >= 25, 'Attenzione'] += "🧂 Ingredienti alti  "
+   #  critici.loc[critici['% ingredienti'] < 25, 'Attenzione'] += "🧂 Ingredienti OK  "
+    # critici.loc[critici['% dipendenti'] >= 20, 'Attenzione'] += "👥 Dipendenti alti  "
+   #  critici.loc[critici['% dipendenti'] < 20, 'Attenzione'] += "👥 Dipendenti OK  "
+   #  critici.loc[critici['fatturato'] <= 450, 'Attenzione'] += "📉 Fatturato basso"
+   #  critici.loc[critici['fatturato'] > 450, 'Attenzione'] += "📉 Fatturato OK"
+
+    # Definisci una funzione di stile
+   #  def highlight_perfetto(row):
+   #      if row['Attenzione'] == "":
+   #          return ['background-color: #d4edda'] * len(row)  # verde chiaro
+   #      else:
+   #          return [''] * len(row)
+    
+   #  styled_df = critici[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1).style.apply(highlight_perfetto, axis=1)
+   #  st.write(styled_df.to_html(escape=False), unsafe_allow_html=True)
+# Colonna Attenzione
     critici['Attenzione'] = ""
     critici.loc[critici['% ingredienti'] >= 25, 'Attenzione'] += "🧂 Ingredienti alti  "
     critici.loc[critici['% ingredienti'] < 25, 'Attenzione'] += "🧂 Ingredienti OK  "
@@ -206,16 +224,52 @@ with tabs[6]:
     critici.loc[critici['fatturato'] <= 450, 'Attenzione'] += "📉 Fatturato basso"
     critici.loc[critici['fatturato'] > 450, 'Attenzione'] += "📉 Fatturato OK"
 
-    # Definisci una funzione di stile
-    def highlight_perfetto(row):
-        if row['Attenzione'] == "":
-            return ['background-color: #d4edda'] * len(row)  # verde chiaro
-        else:
-            return [''] * len(row)
-    
-    styled_df = critici[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1).style.apply(highlight_perfetto, axis=1)
-    st.write(styled_df.to_html(escape=False), unsafe_allow_html=True)
+    # Costruzione tabella HTML con righe verdi se tutto è OK
+    table_html = """
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+        .perfetto {
+            background-color: #d4edda;
+        }
+    </style>
+    <table>
+        <tr>
+            <th>Data</th>
+            <th>Fatturato</th>
+            <th>% Ingredienti</th>
+            <th>% Dipendenti</th>
+            <th>Attenzione</th>
+        </tr>
+    """
 
+    for _, row in critici.iterrows():
+        is_perfect = all([
+            "alti" not in row['Attenzione'],
+            "basso" not in row['Attenzione']
+        ])
+        row_class = "perfetto" if is_perfect else ""
+        table_html += f"""
+        <tr class="{row_class}">
+            <td>{row['data']}</td>
+            <td>{row['fatturato']}</td>
+            <td>{row['% ingredienti']}</td>
+            <td>{row['% dipendenti']}</td>
+            <td>{row['Attenzione']}</td>
+        </tr>
+        """
+
+    table_html += "</table>"
+
+    st.markdown(table_html, unsafe_allow_html=True)
     #st.dataframe(critici[['data', 'fatturato', '% ingredienti', '% dipendenti', 'Attenzione']].round(1))
 
 with tabs[7]:
