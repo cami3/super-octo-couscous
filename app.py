@@ -5,7 +5,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from PIL import Image
-from datetime import timedelta
+from datetime import date, timedelta
 
 st.set_page_config(page_title="Pokè To Go! – Dashboard Business", layout="wide")
 
@@ -61,7 +61,7 @@ cost_cols = ['Dipendente']
 exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data','fatturato']
 ingred_cols = [c for c in df.columns if c not in exclude]
 
-from datetime import timedelta
+
 
 # Min e max da dati
 min_date = df['data'].min().date()
