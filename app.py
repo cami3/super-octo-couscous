@@ -212,6 +212,7 @@ with tabs[7]:
 - **Bibite e Sorbetti**: solo costi.
 - **%**: medie giornaliere.
 - **Confronto annuale**: su anno solare.
+- **Soglie di attenzione**: % Ingredienti 25; % Dipendenti 20; Fatturato 450€.
 """)
 
 # --- ESPORTAZIONE ---
