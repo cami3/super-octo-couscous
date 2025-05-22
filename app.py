@@ -84,7 +84,9 @@ df['poke_totali'] = df[poke_cols].sum(axis=1)
 df['extra_totali'] = df[extra_cols].sum(axis=1)
 df['bibite_sorbetti'] = df[bibite_cols + sorbetti_cols].sum(axis=1)
 
-min_date, max_date = df['data'].min().date(), df['data'].max().date()
+min_date = pd.to_datetime(df['data'].min())
+max_date = pd.to_datetime(df['data'].max())
+
 with st.form("date_form"):
     start, end = st.date_input("📅 Seleziona periodo", [min_date, max_date], min_value=min_date, max_value=max_date)
     submitted = st.form_submit_button("📊 Analizza")
