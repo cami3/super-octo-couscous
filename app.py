@@ -65,70 +65,60 @@ cost_cols = ['Dipendente']
 exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data','fatturato']
 ingred_cols = [c for c in df.columns if c not in exclude]
 
-# --- 🔍 QUALITÀ DATI IN INPUT (avvisi per Arianna) ---
+# --- 🔍 VERIFICA QUALITÀ DATI RACCOLTI ---
 
-st.subheader("📋 Controllo qualità dati caricati")
+st.subheader("🧾 Controllo qualità del file caricato")
 
-# 1. Date nulle o non riconosciute
+# 1. Date non valide
 if df['data'].isna().any():
-    st.error("⚠️ Alcune date non valide o non riconosciute (usa il formato **gg/mm/aaaa**).")
+    st.error("⚠️ Alcune date non valide o non riconosciute (controlla il formato gg/mm/aaaa).")
 
 # 2. Date duplicate
 dup = df['data'].duplicated().sum()
 if dup > 0:
     st.warning(f"⚠️ Trovate {dup} date duplicate. Ogni giorno deve avere **una sola riga**.")
 
-# 3. Buchi sospetti nel calendario interno allo stesso anno
+# 3. Valori mancanti (NaN) nei campi critici
+campi_critici = ['fatturato', 'Dipendente'] + poke_cols + extra_cols
+mancanti = {col: df[col].isna().sum() for col in campi_critici if df[col].isna().sum() > 0}
+if mancanti:
+    st.warning("⚠️ Valori **mancanti (vuoti)** in colonne critiche:\n" + "\n".join([f"- {k}: {v} righe" for k, v in mancanti.items()]))
+
+# 4. Valori zero (inseriti) nei campi chiave
+zero_dip = (df['Dipendente'] == 0).sum()
+zero_poke = (df[poke_cols].sum(axis=1) == 0).sum()
+if zero_dip > 0:
+    st.info(f"👥 In **{zero_dip} giorni** il costo Dipendente è **0**. Segnalato manualmente.")
+if zero_poke > 0:
+    st.info(f"🍱 In **{zero_poke} giorni** nessun poke venduto. Verifica se erano chiusure o dimenticanze.")
+
+# 5. Fatturato > 0 ma vendite = 0
+df['vendite_totali'] = df[poke_cols + extra_cols].sum(axis=1)
+fatturato_no_vendite = df[(df['fatturato'] > 0) & (df['vendite_totali'] == 0)]
+if not fatturato_no_vendite.empty:
+    st.warning(f"💸 In **{len(fatturato_no_vendite)} giorni** c'è **fatturato > 0 ma nessuna vendita registrata**.")
+
+# 6. Vendite > 0 ma fatturato = 0
+vendite_no_fatturato = df[(df['fatturato'] == 0) & (df['vendite_totali'] > 0)]
+if not vendite_no_fatturato.empty:
+    st.warning(f"🧾 In **{len(vendite_no_fatturato)} giorni** ci sono **vendite > 0 ma fatturato = 0**.")
+
+# 7. Buchi sospetti all'interno dello stesso anno
 df_sorted = df.sort_values('data').copy()
 df_sorted['delta'] = df_sorted['data'].diff().dt.days
-buchi = df_sorted[(df_sorted['delta'] > 3) & (df_sorted['data'].dt.year == df_sorted['data'].shift().dt.year)]
+df_sorted['anno'] = df_sorted['data'].dt.year
+buchi = df_sorted[(df_sorted['delta'] > 3) & (df_sorted['anno'] == df_sorted['anno'].shift())]
 if not buchi.empty:
-    st.warning(f"🔍 Trovati {len(buchi)} **buchi sospetti** nel calendario (salti > 3 giorni nello stesso anno):")
+    st.warning(f"📆 Trovati {len(buchi)} **buchi sospetti** nel calendario all'interno dello stesso anno.")
     for i, row in buchi.iterrows():
-        giorno1 = df_sorted.loc[i - 1, 'data'].date()
-        giorno2 = row['data'].date()
-        st.markdown(f"- ❗ Dal **{giorno1}** al **{giorno2}**: salto di **{int(row['delta'])} giorni**")
+        prev = df_sorted.loc[i - 1, 'data'].date()
+        curr = row['data'].date()
+        giorni = int(row['delta'])
+        st.markdown(f"- ❗ Dal **{prev}** al **{curr}**: salto di **{giorni} giorni**")
 
-# 4. Valori negativi
-campi_da_controllare = ['fatturato', 'Dipendente'] + poke_cols + extra_cols + bibite_cols + sorbetti_cols
-negativi = {col: (df[col] < 0).sum() for col in campi_da_controllare if (df[col] < 0).any()}
-if negativi:
-    st.warning("⚠️ Valori negativi trovati:\n" + "\n".join([f"- **{col}**: {n} righe" for col, n in negativi.items()]))
-
-# 5. Giornate senza poke venduti
-poke_zero = (df[poke_cols].sum(axis=1) == 0).sum()
-if poke_zero > 0:
-    st.info(f"ℹ️ In **{poke_zero} giornate** non risultano poke venduti. Se erano chiusure infra-settimanali va bene.")
-
-# 6. Nessun ingrediente rilevato
+# 8. Nessun ingrediente rilevato
 if len(ingred_cols) == 0:
-    st.error("⚠️ Nessun ingrediente rilevato. Il file contiene solo colonne di vendite e costi accessori.")
-
-# 7. Fatturato > 0 ma nessuna vendita
-df['vendite_totali'] = df[poke_cols + extra_cols].sum(axis=1)
-anomalie_fatturato = df[(df['fatturato'] > 0) & (df['vendite_totali'] == 0)]
-if not anomalie_fatturato.empty:
-    st.warning(f"💸 In **{len(anomalie_fatturato)} giorni** c'è **fatturato > 0 ma nessuna vendita registrata**.")
-
-# 8. Vendite > 0 ma fatturato = 0
-anomalie_vendite = df[(df['fatturato'] == 0) & (df['vendite_totali'] > 0)]
-if not anomalie_vendite.empty:
-    st.warning(f"🧾 In **{len(anomalie_vendite)} giorni** ci sono **vendite > 0 ma fatturato = 0**.")
-
-# 9. Giorni con Dipendente = 0
-dip_zero = df[df['Dipendente'].fillna(0) == 0]
-if not dip_zero.empty:
-    st.info(f"👥 In **{len(dip_zero)} giorni** il costo Dipendente è **0**. Se erano chiusure stagionali o infra, va bene.")
-
-# ✅ Messaggio di esito positivo
-if (
-    not df['data'].isna().any()
-    and dup == 0
-    and len(buchi) == 0
-    and len(negativi) == 0
-    and len(ingred_cols) > 0
-):
-    st.success("✅ Dati completi e coerenti. Ottimo lavoro Arianna!")
+    st.error("⚠️ Nessun ingrediente rilevato. Controlla che il file contenga colonne oltre a poke, extra, bibite, sorbetti e Dipendente.")
 
 
 # Min e max da dati
