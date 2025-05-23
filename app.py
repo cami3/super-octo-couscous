@@ -53,6 +53,18 @@ for col in df.columns:
         df[col] = pd.to_numeric(df[col], errors='coerce')
    
 
+
+
+
+poke_cols = ['poke_reglular','poke_maxi','poke_baby','fruit_bowl', 'poke_veggy']
+extra_cols = ['Avocado_venduto','Feta_venduto','Philad_venduto','Gomawak_venduto']
+sorbetti_pezzi_col = ['Sorbetti_venduti']
+bibite_cols = ['Acqua nat','Acqua gas','Coca cola','Coca zero','corona','ichnusa','fanta','Estathe limone','Estathe pesca']
+sorbetti_cols = ['Sorbetto limone','Sorbetto mela','Sorbetto mango']
+cost_cols = ['Dipendente']
+exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data','fatturato']
+ingred_cols = [c for c in df.columns if c not in exclude]
+
 # --- 🔍 WARNING SUL FILE INPUT ---
 
 # 1. Date nulle o non riconosciute
@@ -102,18 +114,6 @@ if 'Dipendente' in df.columns:
     giorni_senza_dipendente = df[df['Dipendente'].fillna(0) == 0]
     if not giorni_senza_dipendente.empty:
         st.info(f"👥 In **{len(giorni_senza_dipendente)} giorni** il costo Dipendente è **0**. Verifica se erano giorni di chiusura.")
-
-
-
-
-poke_cols = ['poke_reglular','poke_maxi','poke_baby','fruit_bowl', 'poke_veggy']
-extra_cols = ['Avocado_venduto','Feta_venduto','Philad_venduto','Gomawak_venduto']
-sorbetti_pezzi_col = ['Sorbetti_venduti']
-bibite_cols = ['Acqua nat','Acqua gas','Coca cola','Coca zero','corona','ichnusa','fanta','Estathe limone','Estathe pesca']
-sorbetti_cols = ['Sorbetto limone','Sorbetto mela','Sorbetto mango']
-cost_cols = ['Dipendente']
-exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data','fatturato']
-ingred_cols = [c for c in df.columns if c not in exclude]
 
 
 
@@ -244,11 +244,6 @@ fig = px.bar(top_10_df, x='Ingrediente', y='Spesa Media Giornaliera (€)', text
 fig.update_traces(texttemplate='€ %{text:.2f}', textposition='outside')
 fig.update_layout(title="🥇 Top 10 Ingredienti – Spesa Media Giornaliera", yaxis_title="€ al giorno")
 st.plotly_chart(fig, use_container_width=True)
-
-st.write("Somma ingredienti grezzi:", df[ingred_cols].sum().sum())
-st.write("Somma ingredienti spalmati:", df_dist.sum().sum())
-st.write("Somma spalmati in df_sel:", df_sel['totale_ingredienti'].sum())
-st.write("Somma grezzi in df_sel:", df_sel['ingredienti_grezzi'].sum())
 
 
 # --- KPI ---
