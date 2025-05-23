@@ -69,29 +69,42 @@ ingred_cols = [c for c in df.columns if c not in exclude]
 # --- 🔍 Controllo qualità del file caricato ---
 with st.expander("🧾 Controllo qualità del file caricato", expanded=True):
     campi_critici = ['fatturato', 'Dipendente'] + poke_cols + extra_cols
+    problemi = False
+
     # 1. Celle vuote (NaN)
     st.subheader("⚠️ Valori mancanti (celle vuote)")
     for col in campi_critici:
         mask = df[col].isna()
         if mask.any():
+            problemi = True
             date_list = df.loc[mask, 'data'].dt.strftime("%d/%m/%Y").tolist()
             st.markdown(f"- **{col}**: {len(date_list)} righe → {', '.join(date_list[:5])}{'...' if len(date_list) > 5 else ''}")
+    if not problemi:
+        st.success("✅ Nessun valore mancante nelle colonne critiche.")
 
     # 2. Zeri espliciti (inseriti manualmente)
     st.subheader("ℹ️ Zeri espliciti (es. chiuso ma compilato)")
+    zeri_presenti = False
     for col in campi_critici:
         mask = df[col] == 0
         if mask.any():
+            zeri_presenti = True
             date_list = df.loc[mask, 'data'].dt.strftime("%d/%m/%Y").tolist()
             st.markdown(f"- **{col} = 0** in {len(date_list)} giorni → {', '.join(date_list[:5])}{'...' if len(date_list) > 5 else ''}")
+    if not zeri_presenti:
+        st.success("✅ Nessuno zero esplicito rilevato nei dati critici.")
 
-    # 3. Ingredienti con 0 (meglio usare celle vuote)
-    st.subheader("🧂 Ingredienti con valore 0 (sconsigliato)")
+    # 3. Ingredienti = 0 (non dovrebbe accadere, meglio usare NaN)
+    st.subheader("🧂 Ingredienti con valore 0 (non raccomandato)")
+    ingr_zero = False
     for col in ingred_cols:
         mask = df[col] == 0
         if mask.any():
+            ingr_zero = True
             date_list = df.loc[mask, 'data'].dt.strftime("%d/%m/%Y").tolist()
             st.markdown(f"- **{col} = 0** in {len(date_list)} giorni → {', '.join(date_list[:5])}{'...' if len(date_list) > 5 else ''}")
+    if not ingr_zero:
+        st.success("✅ Nessun ingrediente impostato a 0 (bene!).")
 
     # 4. Fatturato > 0 ma nessuna vendita
     df['vendite_totali'] = df[poke_cols + extra_cols].sum(axis=1)
@@ -99,18 +112,24 @@ with st.expander("🧾 Controllo qualità del file caricato", expanded=True):
     if mask.any():
         date_list = df.loc[mask, 'data'].dt.strftime("%d/%m/%Y").tolist()
         st.warning(f"💸 **Fatturato > 0 ma nessuna vendita** in {len(date_list)} giorni → {', '.join(date_list[:5])}{'...' if len(date_list) > 5 else ''}")
+    else:
+        st.success("✅ Ogni giorno con fatturato ha anche vendite registrate.")
 
     # 5. Vendite > 0 ma fatturato = 0
     mask = (df['vendite_totali'] > 0) & (df['fatturato'] == 0)
     if mask.any():
         date_list = df.loc[mask, 'data'].dt.strftime("%d/%m/%Y").tolist()
         st.warning(f"🧾 **Vendite > 0 ma fatturato = 0** in {len(date_list)} giorni → {', '.join(date_list[:5])}{'...' if len(date_list) > 5 else ''}")
+    else:
+        st.success("✅ Ogni giorno con vendite ha anche un fatturato valido.")
 
     # 6. Nessun poke venduto
     mask = df[poke_cols].sum(axis=1) == 0
     if mask.any():
         date_list = df.loc[mask, 'data'].dt.strftime("%d/%m/%Y").tolist()
         st.info(f"🍱 Nessun poke venduto in {len(date_list)} giorni → {', '.join(date_list[:5])}{'...' if len(date_list) > 5 else ''}")
+    else:
+        st.success("✅ Tutti i giorni contengono almeno un poke venduto.")
 
     # 7. Dipendente = 0
     if 'Dipendente' in df.columns:
@@ -118,6 +137,8 @@ with st.expander("🧾 Controllo qualità del file caricato", expanded=True):
         if mask.any():
             date_list = df.loc[mask, 'data'].dt.strftime("%d/%m/%Y").tolist()
             st.info(f"👥 Costo **Dipendente = 0** in {len(date_list)} giorni → {', '.join(date_list[:5])}{'...' if len(date_list) > 5 else ''}")
+        else:
+            st.success("✅ Il costo Dipendente è sempre compilato.")
 
 
 # Min e max da dati
