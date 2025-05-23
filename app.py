@@ -51,6 +51,60 @@ df['data'] = pd.to_datetime(df['data'], dayfirst=True, errors='coerce')
 for col in df.columns:
     if col != 'data':
         df[col] = pd.to_numeric(df[col], errors='coerce')
+   
+
+# --- 🔍 WARNING SUL FILE INPUT ---
+
+# 1. Date nulle o non riconosciute
+if df['data'].isna().any():
+    st.error("⚠️ Alcune date non valide o non riconosciute (controlla il formato gg/mm/aaaa).")
+
+# 2. Date duplicate
+dup = df['data'].duplicated().sum()
+if dup > 0:
+    st.warning(f"⚠️ Trovate {dup} date duplicate. Ogni giorno deve avere **una sola riga**.")
+
+# 3. Giorni mancanti nel calendario
+date_aperte = pd.date_range(df['data'].min(), df['data'].max(), freq='D')
+mancanti = set(date_aperte.date) - set(df['data'].dt.date)
+if len(mancanti) > 0:
+    st.info(f"ℹ️ Mancano **{len(mancanti)} giorni** tra {df['data'].min().date()} e {df['data'].max().date()}. Verifica chiusure stagionali o dimenticanze.")
+
+# 4. Valori negativi
+colonne_da_controllare = ['fatturato', 'Dipendente'] + poke_cols + extra_cols + bibite_cols + sorbetti_cols
+negativi = {col: (df[col] < 0).sum() for col in colonne_da_controllare if (df[col] < 0).any()}
+if negativi:
+    msg = "⚠️ Valori negativi trovati:\n" + "\n".join([f"- {col}: {n} righe" for col, n in negativi.items()])
+    st.warning(msg)
+
+# 5. Giornate senza poke
+poke_zero = (df[poke_cols].sum(axis=1) == 0).sum()
+if poke_zero > 0:
+    st.info(f"ℹ️ In **{poke_zero} giornate** non risulta **nessuna vendita di poke**.")
+
+# 6. Nessun ingrediente rilevato
+if len(ingred_cols) == 0:
+    st.error("⚠️ Nessun ingrediente rilevato. Controlla che il file contenga colonne oltre a poke, extra, bibite, sorbetti, dipendente.")
+
+# 7. Fatturato > 0 ma vendite = 0
+df['vendite_totali'] = df[poke_cols + extra_cols].sum(axis=1)
+giorni_fatturato_senza_vendite = df[(df['fatturato'] > 0) & (df['vendite_totali'] == 0)]
+if not giorni_fatturato_senza_vendite.empty:
+    st.warning(f"💸 In **{len(giorni_fatturato_senza_vendite)} giorni** c'è **fatturato > 0 ma nessuna vendita registrata**.")
+
+# 8. Vendite > 0 ma fatturato = 0
+giorni_vendite_senza_fatturato = df[(df['fatturato'] == 0) & (df['vendite_totali'] > 0)]
+if not giorni_vendite_senza_fatturato.empty:
+    st.warning(f"🧾 In **{len(giorni_vendite_senza_fatturato)} giorni** ci sono **vendite > 0 ma fatturato = 0**.")
+
+# 9. Dipendente = 0
+if 'Dipendente' in df.columns:
+    giorni_senza_dipendente = df[df['Dipendente'].fillna(0) == 0]
+    if not giorni_senza_dipendente.empty:
+        st.info(f"👥 In **{len(giorni_senza_dipendente)} giorni** il costo Dipendente è **0**. Verifica se erano giorni di chiusura.")
+
+
+
 
 poke_cols = ['poke_reglular','poke_maxi','poke_baby','fruit_bowl', 'poke_veggy']
 extra_cols = ['Avocado_venduto','Feta_venduto','Philad_venduto','Gomawak_venduto']
