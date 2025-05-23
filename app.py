@@ -123,32 +123,35 @@ prev_start = start.replace(year=start.year - 1)
 prev_end = end.replace(year=end.year - 1)
 
 # --- DISTRIBUZIONE COSTI CORRETTA (spezzata tra stagioni annuali) ---
+# --- DISTRIBUZIONE COSTI CORRETTA (includendo il giorno di acquisto e senza attraversare stagioni annuali) ---
 df_dist = pd.DataFrame(index=df.index)
-# Ricalcolo spalmature ingredienti
+
 for ing in ingred_cols:
     s = df[['data', ing]].dropna()
     s = s[s[ing] > 0].sort_values('data')
     arr = pd.Series(0.0, index=df.index)
 
-    # Spalmatura tra acquisti nello stesso anno
-    for i in range(len(s) - 1):
+    for i in range(len(s)):
         a = s.iloc[i]['data']
-        b = s.iloc[i+1]['data']
-        if a.year == b.year:
-            intervallo = (df['data'] >= a) & (df['data'] < b)
-            giorni_utili = intervallo.sum()
-            if giorni_utili > 0:
-                arr[intervallo] += s.iloc[i][ing] / giorni_utili
+        valore = s.iloc[i][ing]
 
-    # Spalmatura dopo ultimo acquisto (incluso giorno acquisto, solo fino a fine anno)
-    if not s.empty:
-        last_date = s.iloc[-1]['data']
-        last_value = s.iloc[-1][ing]
-        fine_anno = pd.Timestamp(year=last_date.year, month=12, day=31)
-        intervallo_finale = (df['data'] >= last_date) & (df['data'] <= fine_anno) & (df['data'].dt.year == last_date.year)
-        giorni_utili_finali = intervallo_finale.sum()
-        if giorni_utili_finali > 0:
-            arr[intervallo_finale] += last_value / giorni_utili_finali
+        if i < len(s) - 1:
+            b = s.iloc[i+1]['data']
+
+            # ❗ Spalma solo se nello stesso anno
+            if a.year == b.year:
+                intervallo = (df['data'] >= a) & (df['data'] < b)
+            else:
+                fine_anno = pd.Timestamp(year=a.year, month=12, day=31)
+                intervallo = (df['data'] >= a) & (df['data'] <= fine_anno)
+        else:
+            # Ultimo acquisto: spalma fino a fine anno
+            fine_anno = pd.Timestamp(year=a.year, month=12, day=31)
+            intervallo = (df['data'] >= a) & (df['data'] <= fine_anno)
+
+        giorni_utili = intervallo.sum()
+        if giorni_utili > 0:
+            arr[intervallo] += valore / giorni_utili
 
     df_dist[ing] = arr
 
