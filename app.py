@@ -483,7 +483,7 @@ with tabs[8]:
     cat_sel = st.selectbox("🧂 Filtra per categoria", cat_keys, index=default_index, key="cat_sel")
 
     col_sel = categorie[cat_sel]
-    df_rif = df[['data'] + col_sel].copy()
+    df_rif = df_sel[['data'] + col_sel].copy()
     df_rif = df_rif[(df_rif[col_sel] > 0).any(axis=1)]
 
     # --- Formato long
