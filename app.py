@@ -66,35 +66,55 @@ exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['d
 ingred_cols = [c for c in df.columns if c not in exclude]
 
 # --- 🔍 Controllo qualità del file caricato ---
-st.subheader("🧾 Controllo qualità del file caricato")
+with st.expander("🧾 Controllo qualità del file caricato", expanded=True):
+    campi_critici = ['fatturato', 'Dipendente'] + poke_cols + extra_cols
+    messaggi = []
 
-# Definisci i campi critici per la raccolta dati
-campi_critici = ['fatturato', 'Dipendente'] + poke_cols + extra_cols
+    # 1. Valori mancanti (NaN)
+    nan_mask = df[campi_critici].isna()
+    if nan_mask.any().any():
+        st.error("⚠️ Valori *mancanti* (celle vuote) trovati:")
+        for col in campi_critici:
+            n = nan_mask[col].sum()
+            if n > 0:
+                date_na = df['data'][nan_mask[col]].dt.strftime("%d/%m/%Y").tolist()
+                st.markdown(f"- **{col}**: {n} righe → {', '.join(date_na[:3])}{'...' if len(date_na) > 3 else ''}")
 
-# 1. Valori mancanti (NaN)
-nan_rows = df[df[campi_critici].isna().any(axis=1)]
-if not nan_rows.empty:
-    st.error(f"⚠️ Trovate {len(nan_rows)} righe con **valori mancanti** in colonne chiave (forse dimenticanze):")
-    st.dataframe(nan_rows[['data'] + [col for col in campi_critici if col in nan_rows.columns]])
+    # 2. Zeri espliciti
+    zero_mask = (df[campi_critici] == 0)
+    if zero_mask.any().any():
+        st.info("ℹ️ Giorni con **zeri espliciti** (es. negozio chiuso ma compilato manualmente):")
+        for col in campi_critici:
+            z = zero_mask[col].sum()
+            if z > 0:
+                date_zero = df['data'][zero_mask[col]].dt.strftime("%d/%m/%Y").tolist()
+                st.markdown(f"- **{col} = 0** in {z} giorni → {', '.join(date_zero[:3])}{'...' if len(date_zero) > 3 else ''}")
 
-# 2. Zeri espliciti (possibili chiusure manuali)
-zero_rows = df[(df[campi_critici] == 0).any(axis=1)]
-if not zero_rows.empty:
-    st.info(f"ℹ️ In {len(zero_rows)} righe ci sono **zeri espliciti** (forse giorni chiusi):")
-    st.dataframe(zero_rows[['data'] + [col for col in campi_critici if col in zero_rows.columns]])
+    # 3. Fatturato > 0 ma nessuna vendita
+    df['vendite_totali'] = df[poke_cols + extra_cols].sum(axis=1)
+    anom_fatt = df[(df['fatturato'] > 0) & (df['vendite_totali'] == 0)]
+    if not anom_fatt.empty:
+        date_anom = anom_fatt['data'].dt.strftime("%d/%m/%Y").tolist()
+        st.warning(f"💸 **Fatturato > 0 ma nessuna vendita** registrata in {len(anom_fatt)} giorni → {', '.join(date_anom[:3])}{'...' if len(date_anom) > 3 else ''}")
 
-# 3. Giorni con fatturato > 0 ma nessuna vendita
-df['vendite_totali'] = df[poke_cols + extra_cols].sum(axis=1)
-giorni_fatturato_senza_vendite = df[(df['fatturato'] > 0) & (df['vendite_totali'] == 0)]
-if not giorni_fatturato_senza_vendite.empty:
-    st.warning("💸 Giorni con **fatturato > 0 ma nessuna vendita registrata**:")
-    st.dataframe(giorni_fatturato_senza_vendite[['data', 'fatturato']])
+    # 4. Vendite > 0 ma fatturato = 0
+    anom_vend = df[(df['fatturato'] == 0) & (df['vendite_totali'] > 0)]
+    if not anom_vend.empty:
+        date_anom = anom_vend['data'].dt.strftime("%d/%m/%Y").tolist()
+        st.warning(f"🧾 **Vendite > 0 ma fatturato = 0** in {len(anom_vend)} giorni → {', '.join(date_anom[:3])}{'...' if len(date_anom) > 3 else ''}")
 
-# 4. Giorni con vendite > 0 ma fatturato = 0
-giorni_vendite_senza_fatturato = df[(df['fatturato'] == 0) & (df['vendite_totali'] > 0)]
-if not giorni_vendite_senza_fatturato.empty:
-    st.warning("🧾 Giorni con **vendite > 0 ma fatturato = 0**:")
-    st.dataframe(giorni_vendite_senza_fatturato[['data', 'vendite_totali']])
+    # 5. Nessun poke venduto
+    poke_0 = df[df[poke_cols].sum(axis=1) == 0]
+    if not poke_0.empty:
+        date_p0 = poke_0['data'].dt.strftime("%d/%m/%Y").tolist()
+        st.info(f"🍱 Nessun poke venduto in {len(poke_0)} giorni → {', '.join(date_p0[:3])}{'...' if len(date_p0) > 3 else ''}")
+
+    # 6. Dipendente = 0
+    if 'Dipendente' in df.columns:
+        dip_0 = df[df['Dipendente'].fillna(0) == 0]
+        if not dip_0.empty:
+            date_d0 = dip_0['data'].dt.strftime("%d/%m/%Y").tolist()
+            st.info(f"👥 Costo **Dipendente = 0** in {len(dip_0)} giorni → {', '.join(date_d0[:3])}{'...' if len(date_d0) > 3 else ''}")
 
 
 # Min e max da dati
