@@ -135,7 +135,7 @@ with st.expander("🧾 Controllo qualità del file caricato", expanded=True):
         if not dip_0.empty:
             date_d0 = dip_0['data'].dt.strftime("%d/%m/%Y").tolist()
             st.info(f"👥 Costo **Dipendente = 0** in {len(dip_0)} giorni → {', '.join(date_d0[:5])}...")
-            st.markdown("📋 Se Arianna **non ha assunto nessuno** in quei giorni, va bene così.")
+            st.markdown("📋 Se **nessuno è assunto** in quei giorni, va bene così.")
         else:
             st.success("✅ Costi dipendente sempre compilati.")
 
