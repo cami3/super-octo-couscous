@@ -65,60 +65,34 @@ cost_cols = ['Dipendente']
 exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data','fatturato']
 ingred_cols = [c for c in df.columns if c not in exclude]
 
-# --- 🔍 VERIFICA QUALITÀ DATI RACCOLTI ---
+# --- 🔍 Qualità del file input (chiaro, utile, con date da controllare) ---
 
 st.subheader("🧾 Controllo qualità del file caricato")
 
-# 1. Date non valide
-if df['data'].isna().any():
-    st.error("⚠️ Alcune date non valide o non riconosciute (controlla il formato gg/mm/aaaa).")
+# 1. Valori mancanti (NaN)
+nan_rows = df[df[campi_critici].isna().any(axis=1)]
+if not nan_rows.empty:
+    st.error(f"⚠️ Trovate {len(nan_rows)} righe con **valori mancanti** in colonne chiave (forse dimenticanze):")
+    st.dataframe(nan_rows[['data'] + [col for col in campi_critici if col in df.columns]])
 
-# 2. Date duplicate
-dup = df['data'].duplicated().sum()
-if dup > 0:
-    st.warning(f"⚠️ Trovate {dup} date duplicate. Ogni giorno deve avere **una sola riga**.")
+# 2. Valori zero (inseriti volontariamente?)
+zero_rows = df[(df[campi_critici] == 0).any(axis=1)]
+if not zero_rows.empty:
+    st.info(f"ℹ️ In {len(zero_rows)} righe ci sono **zeri espliciti**. Potrebbero indicare **giorni di chiusura**.")
+    st.dataframe(zero_rows[['data'] + [col for col in campi_critici if col in df.columns]])
 
-# 3. Valori mancanti (NaN) nei campi critici
-campi_critici = ['fatturato', 'Dipendente'] + poke_cols + extra_cols
-mancanti = {col: df[col].isna().sum() for col in campi_critici if df[col].isna().sum() > 0}
-if mancanti:
-    st.warning("⚠️ Valori **mancanti (vuoti)** in colonne critiche:\n" + "\n".join([f"- {k}: {v} righe" for k, v in mancanti.items()]))
-
-# 4. Valori zero (inseriti) nei campi chiave
-zero_dip = (df['Dipendente'] == 0).sum()
-zero_poke = (df[poke_cols].sum(axis=1) == 0).sum()
-if zero_dip > 0:
-    st.info(f"👥 In **{zero_dip} giorni** il costo Dipendente è **0**. Segnalato manualmente.")
-if zero_poke > 0:
-    st.info(f"🍱 In **{zero_poke} giorni** nessun poke venduto. Verifica se erano chiusure o dimenticanze.")
-
-# 5. Fatturato > 0 ma vendite = 0
+# 3. Giorni con fatturato > 0 ma vendite = 0
 df['vendite_totali'] = df[poke_cols + extra_cols].sum(axis=1)
-fatturato_no_vendite = df[(df['fatturato'] > 0) & (df['vendite_totali'] == 0)]
-if not fatturato_no_vendite.empty:
-    st.warning(f"💸 In **{len(fatturato_no_vendite)} giorni** c'è **fatturato > 0 ma nessuna vendita registrata**.")
+giorni_fatturato_senza_vendite = df[(df['fatturato'] > 0) & (df['vendite_totali'] == 0)]
+if not giorni_fatturato_senza_vendite.empty:
+    st.warning("💸 Giorni con **fatturato > 0 ma nessuna vendita registrata**:")
+    st.dataframe(giorni_fatturato_senza_vendite[['data', 'fatturato']])
 
-# 6. Vendite > 0 ma fatturato = 0
-vendite_no_fatturato = df[(df['fatturato'] == 0) & (df['vendite_totali'] > 0)]
-if not vendite_no_fatturato.empty:
-    st.warning(f"🧾 In **{len(vendite_no_fatturato)} giorni** ci sono **vendite > 0 ma fatturato = 0**.")
-
-# 7. Buchi sospetti all'interno dello stesso anno
-df_sorted = df.sort_values('data').copy()
-df_sorted['delta'] = df_sorted['data'].diff().dt.days
-df_sorted['anno'] = df_sorted['data'].dt.year
-buchi = df_sorted[(df_sorted['delta'] > 3) & (df_sorted['anno'] == df_sorted['anno'].shift())]
-if not buchi.empty:
-    st.warning(f"📆 Trovati {len(buchi)} **buchi sospetti** nel calendario all'interno dello stesso anno.")
-    for i, row in buchi.iterrows():
-        prev = df_sorted.loc[i - 1, 'data'].date()
-        curr = row['data'].date()
-        giorni = int(row['delta'])
-        st.markdown(f"- ❗ Dal **{prev}** al **{curr}**: salto di **{giorni} giorni**")
-
-# 8. Nessun ingrediente rilevato
-if len(ingred_cols) == 0:
-    st.error("⚠️ Nessun ingrediente rilevato. Controlla che il file contenga colonne oltre a poke, extra, bibite, sorbetti e Dipendente.")
+# 4. Giorni con vendite > 0 ma fatturato = 0
+giorni_vendite_senza_fatturato = df[(df['fatturato'] == 0) & (df['vendite_totali'] > 0)]
+if not giorni_vendite_senza_fatturato.empty:
+    st.warning("🧾 Giorni con **vendite > 0 ma fatturato = 0**:")
+    st.dataframe(giorni_vendite_senza_fatturato[['data', 'vendite_totali']])
 
 
 # Min e max da dati
