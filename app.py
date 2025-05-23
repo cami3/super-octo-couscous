@@ -65,23 +65,25 @@ cost_cols = ['Dipendente']
 exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data','fatturato']
 ingred_cols = [c for c in df.columns if c not in exclude]
 
-# --- 🔍 Qualità del file input (chiaro, utile, con date da controllare) ---
-
+# --- 🔍 Controllo qualità del file caricato ---
 st.subheader("🧾 Controllo qualità del file caricato")
+
+# Definisci i campi critici per la raccolta dati
+campi_critici = ['fatturato', 'Dipendente'] + poke_cols + extra_cols
 
 # 1. Valori mancanti (NaN)
 nan_rows = df[df[campi_critici].isna().any(axis=1)]
 if not nan_rows.empty:
     st.error(f"⚠️ Trovate {len(nan_rows)} righe con **valori mancanti** in colonne chiave (forse dimenticanze):")
-    st.dataframe(nan_rows[['data'] + [col for col in campi_critici if col in df.columns]])
+    st.dataframe(nan_rows[['data'] + [col for col in campi_critici if col in nan_rows.columns]])
 
-# 2. Valori zero (inseriti volontariamente?)
+# 2. Zeri espliciti (possibili chiusure manuali)
 zero_rows = df[(df[campi_critici] == 0).any(axis=1)]
 if not zero_rows.empty:
-    st.info(f"ℹ️ In {len(zero_rows)} righe ci sono **zeri espliciti**. Potrebbero indicare **giorni di chiusura**.")
-    st.dataframe(zero_rows[['data'] + [col for col in campi_critici if col in df.columns]])
+    st.info(f"ℹ️ In {len(zero_rows)} righe ci sono **zeri espliciti** (forse giorni chiusi):")
+    st.dataframe(zero_rows[['data'] + [col for col in campi_critici if col in zero_rows.columns]])
 
-# 3. Giorni con fatturato > 0 ma vendite = 0
+# 3. Giorni con fatturato > 0 ma nessuna vendita
 df['vendite_totali'] = df[poke_cols + extra_cols].sum(axis=1)
 giorni_fatturato_senza_vendite = df[(df['fatturato'] > 0) & (df['vendite_totali'] == 0)]
 if not giorni_fatturato_senza_vendite.empty:
