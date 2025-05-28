@@ -126,6 +126,11 @@ with st.expander("🦾 Controllo qualità del file caricato", expanded=True):
     - Se vendite = 0 e anche fatturato = 0, è possibile che fosse una chiusura.
     """)
 
+# Giornate originali presenti nel CSV (cioè negozio realmente aperto)
+date_originali = set(df['data'])
+
+
+
 # Min e max da dati
 min_date = df['data'].min().date()
 max_date = df['data'].max().date()
@@ -240,7 +245,6 @@ df_sel = df[(df['data'] >= start) & (df['data'] <= end)]
 df_prev = df[(df['data'] >= prev_start) & (df['data'] <= prev_end)]
 df_dist_with_date = df[['data']].join(df_dist)
 df_dist_sel = df_dist_with_date[(df_dist_with_date['data'] >= start) & (df_dist_with_date['data'] <= end)]
-
 df_sel['fatturato'] = df_sel['fatturato'].fillna(0)
 df_sel['poke_totali'] = df_sel[poke_cols].sum(axis=1)
 
@@ -262,7 +266,11 @@ fatturato = df_sel['fatturato'].sum()
 ingredienti = df_sel['totale_ingredienti'].sum()
 dipendenti = df_sel['Dipendente'].sum()
 bibite_sorbetti = df_sel['bibite_sorbetti'].sum()
-df_sel['costi_fissi'] = 300
+# Inizializza costi fissi a 0 per tutti i giorni visibili nel filtro utente
+df_sel['costi_fissi'] = 0
+
+# Applica 300€ solo ai giorni presenti nel CSV originale
+df_sel.loc[df_sel['data'].isin(date_originali), 'costi_fissi'] = 300
 costi_fissi_sel = df_sel['costi_fissi'].sum()
 utile = fatturato - ingredienti - dipendenti - bibite_sorbetti
 col1.metric("Fatturato", f"€ {fatturato:,.2f}")
