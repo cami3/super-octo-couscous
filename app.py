@@ -326,6 +326,15 @@ with tabs[0]:
     melt = df_sel[['data'] + poke_cols].melt('data', var_name='Tipo', value_name='Pezzi')
     st.plotly_chart(px.line(melt, x='data', y='Pezzi', color='Tipo', markers=True), use_container_width=True)
 
+    # Grafico utile giornaliero
+    fig = go.Figure(go.Scatter(
+        x=df_sel['data'], y=df_sel['utile_giornaliero'],
+        mode='lines+markers', name='Utile Giornaliero'
+    ))
+    fig.add_hline(y=0, line_dash="dash", line_color="red", annotation_text="Soglia zero", annotation_position="bottom right")
+    fig.update_layout(title='Utile Giornaliero', xaxis_title='Data', yaxis_title='Utile (€)', hovermode='x unified')
+    st.plotly_chart(fig, use_container_width=True)
+    
 with tabs[1]:
     st.header("🍱 Extra venduti")
     melt = df_sel[['data'] + extra_cols].melt('data', var_name='Tipo', value_name='Euro')
