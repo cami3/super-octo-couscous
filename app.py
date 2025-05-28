@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.express as px
 from PIL import Image
 from datetime import date, timedelta
+import plotly.graph_objects as go
 
 st.set_page_config(page_title="Pokè To Go! – Dashboard Business", layout="wide")
 
