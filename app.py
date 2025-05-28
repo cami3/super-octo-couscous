@@ -262,14 +262,15 @@ fatturato = df_sel['fatturato'].sum()
 ingredienti = df_sel['totale_ingredienti'].sum()
 dipendenti = df_sel['Dipendente'].sum()
 bibite_sorbetti = df_sel['bibite_sorbetti'].sum()
+df_sel['costi_fissi'] = 300
+costi_fissi_sel = df_sel['costi_fissi'].sum()
 utile = fatturato - ingredienti - dipendenti - bibite_sorbetti
 col1.metric("Fatturato", f"€ {fatturato:,.2f}")
 col2.metric("Ingredienti", f"€ {ingredienti:,.2f}")
 col3.metric("Dipendenti", f"€ {dipendenti:,.2f}")
 col4.metric("Bibite/Sorbetti", f"€ {bibite_sorbetti:,.2f}")
 col5.metric("Utile stimato", f"€ {utile:,.2f}")
-costi_fissi = 300  # puoi aggiornarlo da una variabile laterale
-utile_netto = fatturato - ingredienti - dipendenti - bibite_sorbetti - costi_fissi
+utile_netto = fatturato - ingredienti - dipendenti - bibite_sorbetti - costi_fissi_sel
 
 
 
@@ -286,7 +287,7 @@ col3.metric("Costo Medio Ingredienti per Poke", f"€ {ingredienti / tot_poke:.2
 
 
 
-
+costi_fissi = 300  # puoi aggiornarlo da una variabile laterale
 ricavo_medio_poke = fatturato / tot_poke if tot_poke > 0 else 0
 
 if ricavo_medio_poke > 0:
