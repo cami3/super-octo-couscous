@@ -65,81 +65,65 @@ cost_cols = ['Dipendente']
 exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data','fatturato']
 ingred_cols = [c for c in df.columns if c not in exclude]
 
-# --- 🔍 Controllo qualità del file caricato ---
-with st.expander("🧾 Controllo qualità del file caricato", expanded=True):
+# --- 🧾 CONTROLLO QUALITÀ DEL FILE CARICATO ---
+with st.expander("🦾 Controllo qualità del file caricato", expanded=True):
     campi_critici = ['fatturato', 'Dipendente'] + poke_cols + extra_cols
-    st.markdown("👀 Questo controllo aiuta a capire se ci sono **dimenticanze o incoerenze** nei dati raccolti ogni giorno. Usa Excel per filtrare e correggere i valori dove serve.")
+    st.markdown("""
+    👀 Questo controllo ti aiuta a capire se ci sono **dimenticanze, errori o ambiguità** nella raccolta dati giornaliera. Usa **Excel** per filtrare e correggere. Se un giorno il negozio era **chiuso**, lascia pure le celle **vuote**.
+    """)
 
-    # 1. Celle vuote
-    st.subheader("⚠️ Valori mancanti (celle vuote)")
+    # --- 1. CELLE VUOTE ---
     nan_mask = df[campi_critici].isna()
-    has_nan = False
     for col in campi_critici:
-        n = nan_mask[col].sum()
-        if n > 0:
-            has_nan = True
-            date_na = df['data'][nan_mask[col]].dt.strftime("%d/%m/%Y").tolist()
-            st.markdown(f"- **{col}**: {n} giorni vuoti → {', '.join(date_na[:5])}...")
-    if not has_nan:
-        st.success("✅ Nessun valore mancante (vuoto) nei campi critici.")
+        nan_dates = df['data'][nan_mask[col]].dt.strftime("%d/%m/%Y").tolist()
+        if nan_dates:
+            st.warning(f"⚠️ **{col}** ha {len(nan_dates)} giorni vuoti → {', '.join(nan_dates[:5])}...")
 
-    st.markdown("""
-    ✏️ *Cosa fare in Excel:*  
-    - Usa `Filtro` per trovare le celle vuote nei campi elencati.  
-    - Compila solo se quel giorno il negozio **era aperto**.  
-    - Altrimenti, lascia pure vuoto.
-    """)
-
-    # 2. Zeri espliciti
-    st.subheader("ℹ️ Zeri espliciti (compilati manualmente)")
+    # --- 2. ZERI ESPLICITI (es. chiusure compilate manualmente) ---
     zero_mask = (df[campi_critici] == 0)
-    has_zero = False
     for col in campi_critici:
-        z = zero_mask[col].sum()
-        if z > 0:
-            has_zero = True
-            date_zero = df['data'][zero_mask[col]].dt.strftime("%d/%m/%Y").tolist()
-            st.markdown(f"- **{col} = 0** in {z} giorni → {', '.join(date_zero[:5])}...")
-    if not has_zero:
-        st.success("✅ Nessun 0 esplicito inserito (bene!).")
+        zero_dates = df['data'][zero_mask[col]].dt.strftime("%d/%m/%Y").tolist()
+        if zero_dates:
+            st.info(f"ℹ️ **{col} = 0** in {len(zero_dates)} giorni → {', '.join(zero_dates[:5])}...")
 
-    st.markdown("""
-    🟡 *Attenzione:* lo 0 può indicare:  
-    - Negozio **chiuso** (ok!)  
-    - **Errore di inserimento** → controlla!  
-    📋 *In Excel, puoi filtrare per `=0` per ciascuna colonna.*
-    """)
-
-    # 3. Fatturato > 0 ma vendite = 0
+    # --- 3. FATTURATO > 0 MA NESSUNA VENDITA ---
     df['vendite_totali'] = df[poke_cols + extra_cols].sum(axis=1)
     anom_fatt = df[(df['fatturato'] > 0) & (df['vendite_totali'] == 0)]
     if not anom_fatt.empty:
-        date_anom = anom_fatt['data'].dt.strftime("%d/%m/%Y").tolist()
-        st.warning(f"💸 Fatturato > 0 ma **nessuna vendita** in {len(anom_fatt)} giorni → {', '.join(date_anom[:5])}...")
-        st.markdown("🔍 *Controlla su Excel se hai dimenticato di segnare i poke o gli extra.*")
-    else:
-        st.success("✅ Ogni giorno con fatturato ha vendite registrate.")
+        st.error(f"💸 **Fatturato > 0 ma nessuna vendita registrata** in {len(anom_fatt)} giorni → {', '.join(anom_fatt['data'].dt.strftime('%d/%m/%Y').tolist()[:5])}...")
 
-    # 4. Nessun poke venduto
-    poke_0 = df[df[poke_cols].sum(axis=1) == 0]
-    if not poke_0.empty:
-        date_p0 = poke_0['data'].dt.strftime("%d/%m/%Y").tolist()
-        st.info(f"🍱 Nessun poke venduto in {len(poke_0)} giorni → {', '.join(date_p0[:5])}...")
-        st.markdown("📌 Se il negozio era **chiuso** quei giorni, nessun problema.")
-    else:
-        st.success("✅ Tutti i giorni con vendite includono poke.")
+    # --- 4. VENDITE > 0 MA FATTURATO = 0 ---
+    anom_vend = df[(df['fatturato'] == 0) & (df['vendite_totali'] > 0)]
+    if not anom_vend.empty:
+        st.warning(f"📜 **Vendite > 0 ma fatturato = 0** in {len(anom_vend)} giorni → {', '.join(anom_vend['data'].dt.strftime('%d/%m/%Y').tolist()[:5])}...")
 
-    # 5. Dipendente = 0
+    # --- 5. NESSUN POKE VENDUTO ---
+    no_poke = df[df[poke_cols].sum(axis=1) == 0]
+    if not no_poke.empty:
+        st.info(f"🍱 Nessun poke venduto in {len(no_poke)} giorni → {', '.join(no_poke['data'].dt.strftime('%d/%m/%Y').tolist()[:5])}...")
+
+    # --- 6. DIPENDENTE = 0 ---
     if 'Dipendente' in df.columns:
         dip_0 = df[df['Dipendente'].fillna(0) == 0]
         if not dip_0.empty:
-            date_d0 = dip_0['data'].dt.strftime("%d/%m/%Y").tolist()
-            st.info(f"👥 Costo **Dipendente = 0** in {len(dip_0)} giorni → {', '.join(date_d0[:5])}...")
-            st.markdown("📋 Se **nessuno è assunto** in quei giorni, va bene così.")
-        else:
-            st.success("✅ Costi dipendente sempre compilati.")
+            st.info(f"👥 Costo **Dipendente = 0** in {len(dip_0)} giorni → {', '.join(dip_0['data'].dt.strftime('%d/%m/%Y').tolist()[:5])}...")
 
+    # --- 7. INGREDIENTI A 0 (da evitare) ---
+    ingr_zero = df[ingred_cols].fillna(0).apply(lambda col: (col == 0).sum())
+    ingr_zero = ingr_zero[ingr_zero > 0]
+    if not ingr_zero.empty:
+        st.warning("🧂 Ingredienti con valore 0 rilevato (meglio lasciarli vuoti se non riforniti):")
+        for col, n in ingr_zero.items():
+            st.markdown(f"- {col}: {n} righe")
+    else:
+        st.success("✅ Nessun ingrediente impostato a 0: ottimo!")
 
+    st.markdown("""
+    ✏️ **Suggerimenti Excel:**
+    - Usa `Filtro` → `Celle Vuote` per completare solo i giorni di apertura.
+    - Filtra `=0` per controllare giornate compilate a mano.
+    - Se vendite = 0 e anche fatturato = 0, è possibile che fosse una chiusura.
+    """)
 
 # Min e max da dati
 min_date = df['data'].min().date()
@@ -309,11 +293,11 @@ else:
 # --- INTERPRETAZIONE ---
 st.header("🧠 Lettura sintetica del periodo")
 giorni = len(df_sel)
-critici = df_sel[(df_sel['% ingredienti'] > 35) | (df_sel['% dipendenti'] > 25) | (df_sel['fatturato'] < 300)]
+critici = df_sel[(df_sel['% ingredienti'] > 25) | (df_sel['% dipendenti'] > 25) | (df_sel['fatturato'] < 360)]
 perc = len(critici) / giorni * 100 if giorni > 0 else 0
-solo1 = critici[((critici['% ingredienti'] > 35).astype(int) + 
+solo1 = critici[((critici['% ingredienti'] > 25).astype(int) + 
                  (critici['% dipendenti'] > 25).astype(int) + 
-                 (critici['fatturato'] < 300).astype(int)) == 1]
+                 (critici['fatturato'] < 360).astype(int)) == 1]
 multi = len(critici) - len(solo1)
 
 st.info(f"🔎 Su {giorni} giornate: {len(critici)} critiche ({perc:.1f}%) → {len(solo1)} con 1 criticità, {multi} con più.")
@@ -424,8 +408,8 @@ with tabs[6]:
     st.header("⚠️ Giornate da monitorare")
     critici['Attenzione'] = ""
     critici.loc[critici['% ingredienti'] >= 25, 'Attenzione'] += "🧂 Ingredienti alti  "
-    critici.loc[critici['% dipendenti'] >= 20, 'Attenzione'] += "👥 Dipendenti alti  "
-    critici.loc[critici['fatturato'] <= 450, 'Attenzione'] += "📉 Fatturato basso"
+    critici.loc[critici['% dipendenti'] >= 25, 'Attenzione'] += "👥 Dipendenti alti  "
+    critici.loc[critici['fatturato'] <= 360, 'Attenzione'] += "📉 Fatturato basso"
     
     st.markdown("""
     <style>
@@ -459,7 +443,7 @@ with tabs[7]:
 - **Bibite e Sorbetti**: solo costi.
 - **%**: medie giornaliere.
 - **Confronto annuale**: su anno solare.
-- **Soglie di attenzione**: % Ingredienti 25; % Dipendenti 20; Fatturato 450€.
+- **Soglie di attenzione**: % Ingredienti 25; % Dipendenti 25; Fatturato 360€.
 - **costi_fissi = 300**
 """)
 
