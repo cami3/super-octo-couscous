@@ -261,7 +261,7 @@ st.plotly_chart(fig, use_container_width=True)
 
 # --- KPI ---
 st.header("📌 Riepilogo operativo")
-col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
 fatturato = df_sel['fatturato'].sum()
 ingredienti = df_sel['totale_ingredienti'].sum()
 dipendenti = df_sel['Dipendente'].sum()
@@ -272,6 +272,7 @@ df_sel['costi_fissi'] = 0
 # Applica 300€ solo ai giorni presenti nel CSV originale
 df_sel.loc[df_sel['data'].isin(date_originali), 'costi_fissi'] = 300
 costi_fissi_sel = df_sel['costi_fissi'].sum()
+
 utile = fatturato - ingredienti - dipendenti - bibite_sorbetti
 col1.metric("Fatturato", f"€ {fatturato:,.2f}")
 col2.metric("Ingredienti", f"€ {ingredienti:,.2f}")
@@ -280,11 +281,10 @@ col4.metric("Bibite/Sorbetti", f"€ {bibite_sorbetti:,.2f}")
 col5.metric("Utile stimato", f"€ {utile:,.2f}")
 utile_netto = fatturato - ingredienti - dipendenti - bibite_sorbetti - costi_fissi_sel
 
-
-
 ingredienti_grezzi = df_sel['ingredienti_grezzi'].sum()
-col6.metric("Ingredienti Grezzi", f"€ {ingredienti_grezzi:,.2f}")
-col7.metric("Utile Netto Stimato", f"€ {utile_netto:,.2f}")
+col7.metric("Ingredienti Grezzi", f"€ {ingredienti_grezzi:,.2f}")
+col6.metric("Utile Netto Stimato", f"€ {utile_netto:,.2f}")
+col8.metric("Costi Fissi Totali", f"€ {costi_fissi_sel:,.2f}")
 
 tot_poke = df_sel['poke_totali'].sum()
 tot_extra = df_sel['extra_totali'].sum()
