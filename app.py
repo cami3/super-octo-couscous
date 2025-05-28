@@ -261,7 +261,8 @@ st.plotly_chart(fig, use_container_width=True)
 
 # --- KPI ---
 st.header("📌 Riepilogo operativo")
-col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
+col1, col2, col3, col4 = st.columns(4)
+col5, col6, col7, col8 = st.columns(4)
 fatturato = df_sel['fatturato'].sum()
 ingredienti = df_sel['totale_ingredienti'].sum()
 dipendenti = df_sel['Dipendente'].sum()
