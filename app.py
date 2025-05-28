@@ -270,7 +270,7 @@ bibite_sorbetti = df_sel['bibite_sorbetti'].sum()
 df_sel['costi_fissi'] = 0
 
 # Applica 300€ solo ai giorni presenti nel CSV originale
-df_sel.loc[df_sel['data'].isin(date_originali), 'costi_fissi'] = 300
+df_sel.loc[df_sel['data'].isin(date_originali), 'costi_fissi'] = 166
 costi_fissi_sel = df_sel['costi_fissi'].sum()
 
 utile = fatturato - ingredienti - dipendenti - bibite_sorbetti
