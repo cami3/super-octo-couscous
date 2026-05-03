@@ -619,6 +619,7 @@ with tab_v:
                labels={'data': ''}, title="Poke venduti per tipo"),
         use_container_width=True
     )
+    st.caption("Composizione giornaliera delle vendite per formato. Passa il mouse su una barra per vedere i dettagli.")
 
     fig_duo = go.Figure()
     fig_duo.add_trace(go.Bar(
@@ -637,6 +638,7 @@ with tab_v:
         hovermode='x unified', legend=dict(orientation='h')
     )
     st.plotly_chart(fig_duo, use_container_width=True)
+    st.caption("Utile lordo = fatturato − ingredienti − bibite/sorbetti − dipendente. I giorni sotto la linea rossa non coprono i costi variabili.")
 
     df_sel['margine_per_poke'] = df_sel.apply(
         lambda r: r['utile_lordo'] / r['poke_totali'] if r['poke_totali'] > 0 else None, axis=1
@@ -647,6 +649,7 @@ with tab_v:
     top5.columns = ['Data', 'Fatturato (€)', 'Poke', 'Margine/poke (€)', 'Utile lordo (€)']
     st.subheader("💰 Top 5 giorni per margine per poke")
     st.dataframe(top5.round(2), hide_index=True, use_container_width=True)
+    st.caption("I giorni con il margine più alto per singolo poke — quelli da replicare.")
 
 # ── TAB COSTI ─────────────────────────────────────────────────────────────────
 with tab_c:
@@ -684,6 +687,7 @@ with tab_c:
         )
         fig_pie.update_layout(margin=dict(t=10, b=10))
         st.plotly_chart(fig_pie, use_container_width=True)
+        st.caption("Distribuzione del fatturato nel periodo. L'utile netto è la fetta che rimane dopo tutti i costi.")
 
     melt_pct = df_sel[['data', 'pct_ingredienti', 'pct_dipendenti']].melt(
         'data', var_name='Voce', value_name='%'
@@ -694,6 +698,7 @@ with tab_c:
     fig_pct.update_layout(xaxis_title=None, yaxis_title='% sul fatturato',
                           legend=dict(orientation='h'))
     st.plotly_chart(fig_pct, use_container_width=True)
+    st.caption("Andamento giornaliero dei costi variabili principali. Giorni sopra la soglia arancione (25%) indicano margini compressi — tipico a inizio stagione o nelle giornate lente.")
 
     ing_avail = [c for c in ingred_cols if c in df_dist_sel.columns]
     if ing_avail:
@@ -705,6 +710,7 @@ with tab_c:
                               marker_color='#e85d04')
         fig_top.update_layout(xaxis_title=None)
         st.plotly_chart(fig_top, use_container_width=True)
+        st.caption("Costo medio giornaliero per ingrediente, calcolato distribuendo ogni rifornimento sui giorni fino al successivo acquisto. Indica dove si concentra la spesa ingredienti.")
 
 # ── TAB FORNITORI ─────────────────────────────────────────────────────────────
 with tab_f:
@@ -721,6 +727,8 @@ with tab_f:
         df_f_per = df_forn[
             (df_forn['data'] >= start_sel) & (df_forn['data'] <= end_sel)
         ].copy()
+
+        st.caption("I dati statistici (media, anomalie) usano tutta la storia registrata, non solo il periodo filtrato in alto.")
 
         # ── 1. PREZZI DA MONITORARE ──────────────────────────────────────────
         st.subheader("🚨 Prezzi da monitorare")
@@ -759,6 +767,7 @@ with tab_f:
 
         # ── 2. LISTINO DI RIFERIMENTO ────────────────────────────────────────
         st.subheader("📋 Listino di riferimento")
+        st.caption("Riferimento rapido prima di fare un ordine. Media e minimo si sbloccano dopo 2-3 acquisti per ingrediente.")
         listino = []
         for ing, grp in df_f_all.groupby('ingrediente'):
             grp = grp.dropna(subset=['prezzo_unitario']).sort_values('data')
@@ -857,6 +866,8 @@ with tab_r:
                    title="Spese di rifornimento per ingrediente", labels={'data': ''}),
             use_container_width=True
         )
+        st.caption("Ogni barra corrisponde a un giorno di acquisto. Compila la cella dell'ingrediente solo nel giorno in cui lo rifornisci — il costo viene distribuito automaticamente fino al rifornimento successivo.")
+
         daily_r = melted_r.groupby('data')['Spesa (€)'].sum().reset_index()
         daily_r['Cumulata (€)'] = daily_r['Spesa (€)'].cumsum()
         st.plotly_chart(
@@ -864,42 +875,64 @@ with tab_r:
                     title="Spesa cumulata rifornimenti", labels={'data': ''}),
             use_container_width=True
         )
-        st.dataframe(
-            melted_r.sort_values(['data', 'Ingrediente']).round(2),
-            hide_index=True, use_container_width=True
-        )
+        st.caption("Totale investito in acquisti ingredienti dall'inizio del periodo — utile per confrontare la spesa tra stagioni o monitorare il budget.")
+
+        totali_ing = melted_r.groupby('Ingrediente')['Spesa (€)'].sum().reset_index()
+        totali_ing = totali_ing.sort_values('Spesa (€)', ascending=False).round(2)
+        totali_ing.columns = ['Ingrediente', 'Totale periodo (€)']
+        st.dataframe(totali_ing, hide_index=True, use_container_width=True)
+        st.caption("Spesa totale per ingrediente nel periodo selezionato.")
 
 # ── TAB GIORNATE CRITICHE ─────────────────────────────────────────────────────
 with tab_cr:
-    sc1, sc2 = st.columns(2)
-    soglia_ing = sc1.slider("Soglia % ingredienti o dipendenti", 10, 50, 25, step=5)
-    soglia_fat = sc2.number_input("Fatturato minimo (€)", min_value=0, value=360, step=20)
+    st.caption(
+        "Giorni aperti (fatturato > 0) che rientrano in almeno uno dei criteri di attenzione. "
+        "I giorni chiusi non vengono considerati."
+    )
+    sc1, sc2, sc3 = st.columns(3)
+    soglia_ing = sc1.slider(
+        "🧂 Soglia % ingredienti", 10, 60, 30, step=5,
+        help="Flagga i giorni in cui il costo ingredienti supera questa % del fatturato"
+    )
+    soglia_dip = sc2.slider(
+        "👥 Soglia % dipendente", 10, 60, 25, step=5,
+        help="Flagga i giorni in cui il costo dipendente supera questa % del fatturato"
+    )
+    soglia_fat = sc3.number_input(
+        "📉 Fatturato minimo (€)", min_value=0, value=300, step=20,
+        help="Flagga i giorni aperti con fatturato sotto questa soglia"
+    )
 
-    critici = df_sel[
-        (df_sel['pct_ingredienti'] > soglia_ing) |
-        (df_sel['pct_dipendenti']  > soglia_ing) |
-        (df_sel['fatturato']       < soglia_fat)
+    GIORNI_IT = {0: 'Lun', 1: 'Mar', 2: 'Mer', 3: 'Gio', 4: 'Ven', 5: 'Sab', 6: 'Dom'}
+    df_sel_open = df_sel[df_sel['fatturato'] > 0].copy()
+
+    critici = df_sel_open[
+        (df_sel_open['pct_ingredienti'] > soglia_ing) |
+        (df_sel_open['pct_dipendenti']  > soglia_dip) |
+        (df_sel_open['fatturato']       < soglia_fat)
     ].copy()
 
     if critici.empty:
-        st.success("✅ Nessuna giornata critica nel periodo selezionato.")
+        st.success(f"✅ Nessuna giornata critica su {len(df_sel_open)} giorni aperti nel periodo.")
     else:
         def _motivo(r):
             m = []
             if r['pct_ingredienti'] > soglia_ing: m.append(f"🧂 Ing. {r['pct_ingredienti']:.0f}%")
-            if r['pct_dipendenti']  > soglia_ing: m.append(f"👥 Dip. {r['pct_dipendenti']:.0f}%")
+            if r['pct_dipendenti']  > soglia_dip: m.append(f"👥 Dip. {r['pct_dipendenti']:.0f}%")
             if r['fatturato']       < soglia_fat: m.append(f"📉 Fat. €{r['fatturato']:.0f}")
             return '  '.join(m)
-        critici['Motivo'] = critici.apply(_motivo, axis=1)
-        st.info(f"{len(critici)} giorni da monitorare su {len(df_sel)} totali ({len(critici)/len(df_sel)*100:.0f}%)")
+        critici['Giorno']  = critici['data'].dt.weekday.map(GIORNI_IT)
+        critici['Motivo']  = critici.apply(_motivo, axis=1)
+        st.info(f"{len(critici)} giorni da monitorare su {len(df_sel_open)} giorni aperti ({len(critici)/len(df_sel_open)*100:.0f}%)")
         st.dataframe(
-            critici[['data','fatturato','poke_totali','pct_ingredienti','pct_dipendenti','utile_lordo','Motivo']].round(1).rename(columns={
+            critici[['data','Giorno','fatturato','poke_totali','pct_ingredienti','pct_dipendenti','utile_lordo','Motivo']].round(1).rename(columns={
                 'data': 'Data', 'fatturato': 'Fatturato (€)', 'poke_totali': 'Poke',
                 'pct_ingredienti': '% Ing', 'pct_dipendenti': '% Dip',
                 'utile_lordo': 'Utile lordo (€)',
             }),
             hide_index=True, use_container_width=True
         )
+        st.caption("🧂 % ingredienti alta = rifornimento pesante o giornata lenta  ·  👥 % dipendente alta = giornata poco intensa  ·  📉 fatturato basso = apertura sottosoglia")
 
 # ── EXPORT ────────────────────────────────────────────────────────────────────
 st.divider()
