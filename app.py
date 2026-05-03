@@ -1,12 +1,151 @@
 # Pokè To Go! – Dashboard Operativa Completa per Arianna
 # Coerente con il sito poketogo.it, con grafici, tabs, metriche e alert
 
+import io
+import random
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 from PIL import Image
 from datetime import date, timedelta
 import plotly.graph_objects as go
+
+@st.cache_data
+def genera_csv_esempio():
+    rng = random.Random(42)
+
+    _all_ingred = [
+        'salmone','tonno','Tonno Saku','Polpo','Gamberetti','Pollo Nuggets','Pollo fette',
+        'Feta','Formaggio spalmabile','Tofu','Uova',
+        'edamame','ceci','mais','carote','cetrioli','pomodori','Cavolo viola','zucchine','cipolle','Goma wakame',
+        'Avocado','Avo Hass','mango','Lime','uva','Mele','melone','Kiwi','Ananas','Anguria',
+        'iceberg','riso_sushi','riso_nero','Riso integrale',
+        'Sesamo nero','Sesamo bianco','Mandorle','nocciole','Cipolle croccanti','Pistacchio','Sale grosso',
+        'Salsa soya','Olio Evo','Teriyaki','Maionese','yogurt','Ponzu','Sriracha',
+    ]
+    _ing_ranges = {
+        'salmone':(80,200),'tonno':(60,150),'Tonno Saku':(40,100),'Polpo':(50,120),
+        'Gamberetti':(40,90),'Pollo Nuggets':(20,50),'Pollo fette':(20,50),
+        'Feta':(15,40),'Formaggio spalmabile':(10,30),'Tofu':(10,25),'Uova':(5,15),
+        'edamame':(15,35),'ceci':(5,15),'mais':(5,12),'carote':(3,8),
+        'cetrioli':(4,10),'pomodori':(5,15),'Cavolo viola':(4,10),
+        'zucchine':(4,10),'cipolle':(3,8),'Goma wakame':(15,35),
+        'Avocado':(20,60),'Avo Hass':(20,60),'mango':(15,40),'Lime':(5,15),
+        'uva':(5,15),'Mele':(5,12),'melone':(8,20),'Kiwi':(5,15),'Ananas':(8,20),'Anguria':(10,30),
+        'iceberg':(8,20),'riso_sushi':(20,50),'riso_nero':(15,40),'Riso integrale':(10,25),
+        'Sesamo nero':(5,15),'Sesamo bianco':(5,15),'Mandorle':(10,25),'nocciole':(10,25),
+        'Cipolle croccanti':(8,20),'Pistacchio':(15,35),'Sale grosso':(2,6),
+        'Salsa soya':(10,30),'Olio Evo':(15,40),'Teriyaki':(15,35),
+        'Maionese':(8,20),'yogurt':(5,15),'Ponzu':(10,25),'Sriracha':(8,20),
+    }
+    _ing_freq = {}
+    for ing in _all_ingred:
+        if ing in ('salmone','tonno','Tonno Saku','Polpo','Gamberetti','Pollo Nuggets','Pollo fette'):
+            _ing_freq[ing] = (2, 4)
+        elif ing in ('iceberg','riso_sushi','riso_nero','Riso integrale','Avocado','Avo Hass','mango','Anguria','melone'):
+            _ing_freq[ing] = (3, 5)
+        else:
+            _ing_freq[ing] = (5, 9)
+
+    start = date(2024, 6, 1)
+    end   = date(2024, 9, 30)
+    days  = []
+    d = start
+    while d <= end:
+        days.append(d)
+        d += timedelta(days=1)
+
+    next_restock = {ing: 0 for ing in _all_ingred}
+    rows = []
+
+    for i, day in enumerate(days):
+        m, dom, dow = day.month, day.day, day.weekday()
+
+        if m == 6:
+            base = rng.uniform(350, 700)
+        elif m == 7 and dom <= 14:
+            base = rng.uniform(600, 1000)
+        elif m == 7:
+            base = rng.uniform(800, 1300)
+        elif m == 8 and dom <= 20:
+            base = rng.uniform(900, 1400)
+        elif m == 8:
+            base = rng.uniform(700, 1100)
+        elif m == 9 and dom <= 15:
+            base = rng.uniform(500, 800)
+        else:
+            base = rng.uniform(300, 600)
+
+        if dow >= 5:
+            base *= rng.uniform(1.15, 1.25)
+        fatturato = round(base, 2)
+
+        tot_poke  = max(1, int(fatturato / rng.uniform(11, 15)))
+        poke_reg  = max(0, int(tot_poke * rng.uniform(0.50, 0.62)))
+        poke_maxi = max(0, int(tot_poke * rng.uniform(0.15, 0.25)))
+        poke_baby = max(0, int(tot_poke * rng.uniform(0.07, 0.13)))
+        fruit_b   = max(0, int(tot_poke * rng.uniform(0.03, 0.07)))
+        poke_veg  = max(0, tot_poke - poke_reg - poke_maxi - poke_baby - fruit_b)
+
+        dipendente = float(rng.choice([70, 75, 80, 85, 90]))
+
+        avo_v  = round(poke_reg * rng.uniform(0.25, 0.40) * 1.5, 2)
+        feta_v = round(poke_reg * rng.uniform(0.10, 0.20) * 1.5, 2)
+        phil_v = round(poke_reg * rng.uniform(0.15, 0.25) * 1.5, 2)
+        goma_v = round(poke_reg * rng.uniform(0.20, 0.35) * 1.5, 2)
+        sorb_v = max(0, int(tot_poke * rng.uniform(0.20, 0.50)))
+
+        sc = tot_poke / 60.0
+        bib = {
+            'Acqua nat':      round(rng.uniform(0.8, 1.5) * sc * 10, 2),
+            'Acqua gas':      round(rng.uniform(0.5, 1.2) * sc * 10, 2),
+            'Coca cola':      round(rng.uniform(1.0, 2.0) * sc * 10, 2),
+            'Coca zero':      round(rng.uniform(0.5, 1.5) * sc * 10, 2),
+            'corona':         round(rng.uniform(0.8, 1.8) * sc * 10, 2),
+            'ichnusa':        round(rng.uniform(0.8, 1.5) * sc * 10, 2),
+            'fanta':          round(rng.uniform(0.4, 0.9) * sc * 10, 2),
+            'Estathe limone': round(rng.uniform(0.4, 0.8) * sc * 10, 2),
+            'Estathe pesca':  round(rng.uniform(0.3, 0.7) * sc * 10, 2),
+        }
+        sorb_costi = {
+            'Sorbetto limone': round(rng.uniform(1.0, 2.5) * sc * 8, 2),
+            'Sorbetto mela':   round(rng.uniform(0.8, 2.0) * sc * 8, 2),
+            'Sorbetto mango':  round(rng.uniform(0.9, 2.2) * sc * 8, 2),
+        }
+
+        ing_vals = {}
+        for ing in _all_ingred:
+            if i >= next_restock[ing]:
+                lo, hi = _ing_ranges[ing]
+                ing_vals[ing] = round(rng.uniform(lo, hi), 2)
+                fmin, fmax = _ing_freq[ing]
+                next_restock[ing] = i + rng.randint(fmin, fmax)
+            else:
+                ing_vals[ing] = ''
+
+        rows.append({
+            'data': day.strftime('%d/%m/%Y'), 'fatturato': fatturato, 'Dipendente': dipendente,
+            'poke_reglular': poke_reg, 'poke_maxi': poke_maxi, 'poke_baby': poke_baby,
+            'fruit_bowl': fruit_b, 'poke_veggy': poke_veg,
+            'Avocado_venduto': avo_v, 'Feta_venduto': feta_v,
+            'Philad_venduto': phil_v, 'Gomawak_venduto': goma_v,
+            'Sorbetti_venduti': sorb_v,
+            **bib, **sorb_costi, **ing_vals,
+        })
+
+    col_order = (
+        ['data','fatturato','Dipendente']
+        + ['poke_reglular','poke_maxi','poke_baby','fruit_bowl','poke_veggy']
+        + ['Avocado_venduto','Feta_venduto','Philad_venduto','Gomawak_venduto']
+        + ['Sorbetti_venduti']
+        + list(bib.keys()) + list(sorb_costi.keys())
+        + _all_ingred
+    )
+    df_fake = pd.DataFrame(rows)[col_order]
+    buf = io.StringIO()
+    df_fake.to_csv(buf, sep=';', index=False)
+    return buf.getvalue().encode('utf-8')
+
 
 st.set_page_config(page_title="Pokè To Go! – Dashboard Business", layout="wide")
 
@@ -121,13 +260,25 @@ with st.expander("📋 Come deve essere fatto il file CSV? (clicca per vedere)",
 
     template_csv = ';'.join(all_cols) + '\n'
     template_csv += ';'.join(['gg/mm/aaaa'] + [''] * (len(all_cols) - 1)) + '\n'
-    st.download_button(
-        "⬇️ Scarica template CSV vuoto",
-        data=template_csv.encode('utf-8'),
-        file_name="template_poketogo.csv",
-        mime="text/csv",
-        help="Apri con Excel, compila e salva come CSV separato da punto e virgola"
-    )
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.download_button(
+            "⬇️ Scarica template CSV vuoto",
+            data=template_csv.encode('utf-8'),
+            file_name="template_poketogo.csv",
+            mime="text/csv",
+            help="Apri con Excel, compila e salva come CSV separato da punto e virgola",
+            use_container_width=True,
+        )
+    with col_b:
+        st.download_button(
+            "🎲 Scarica dati di esempio (stagione estiva 2024 – dati finti)",
+            data=genera_csv_esempio(),
+            file_name="esempio_poketogo_2024.csv",
+            mime="text/csv",
+            help="Dati inventati realistici: giugno–settembre 2024 con picchi ad agosto",
+            use_container_width=True,
+        )
 
 if not uploaded:
     st.stop()
