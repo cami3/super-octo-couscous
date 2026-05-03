@@ -26,7 +26,7 @@ CATEGORIE_ING = {
     'Frutta':   ['Avocado', 'Avo Hass', 'mango', 'Lime', 'uva', 'Mele', 'melone', 'Kiwi', 'Ananas', 'Anguria'],
     'Base':     ['iceberg', 'riso_sushi', 'riso_nero', 'Riso integrale'],
     'Topping':  ['Sesamo nero', 'Sesamo bianco', 'Mandorle', 'nocciole', 'Cipolle croccanti', 'Pistacchio', 'Sale grosso'],
-    'Salse':    ['Salsa soya', 'Olio Evo', 'Teriyaki', 'Maionese', 'yogurt', 'Ponzu', 'Sriracha'],
+    'Salse':    ['Salsa soya', 'Olio Evo', 'Teriyaki', 'Maionese', 'yogurt', 'poke', 'Ponzu', 'Sriracha'],
 }
 ALL_INGRED_COLS = sum(CATEGORIE_ING.values(), [])
 
@@ -416,18 +416,24 @@ else:
 
 st.markdown("")
 
-# KPI ultimi 7 giorni di apertura
-df_7  = df[df['anno'] == anno_corrente].tail(7)
+# KPI ultimi 7 giorni aperti (esclusi giorni chiusi / fatturato=0)
+df_open = df[(df['anno'] == anno_corrente) & (df['fatturato'] > 0)]
+df_7    = df_open.tail(7)
+n_7     = len(df_7)
+
 fat7  = df_7['fatturato'].sum()
 poke7 = df_7['poke_totali'].sum()
 util7 = df_7['utile_lordo'].sum()
-ping7 = df_7['pct_ingredienti'].mean()
+ping7 = df_7['pct_ingredienti'].mean() if n_7 else 0.0
 
 delta_fat = delta_poke = delta_util = None
-if anno_prec and not df_7.empty:
+if anno_prec and n_7:
     d_min = df_7['data'].min().replace(year=anno_prec)
     d_max = df_7['data'].max().replace(year=anno_prec)
-    df_7p = df[(df['anno'] == anno_prec) & (df['data'] >= d_min) & (df['data'] <= d_max)]
+    df_7p = df[
+        (df['anno'] == anno_prec) & (df['fatturato'] > 0) &
+        (df['data'] >= d_min) & (df['data'] <= d_max)
+    ]
     if not df_7p.empty:
         def _delta(a, b):
             return f"{(a - b) / b * 100:+.1f}% vs {anno_prec}" if b else None
@@ -435,22 +441,48 @@ if anno_prec and not df_7.empty:
         delta_poke = _delta(poke7, df_7p['poke_totali'].sum())
         delta_util = _delta(util7, df_7p['utile_lordo'].sum())
 
+label_7 = f"ultimi {n_7} giorni aperti" if n_7 < 7 else "ultimi 7 giorni aperti"
 kc1, kc2, kc3, kc4 = st.columns(4)
-kc1.metric("Fatturato 7gg",        f"€ {fat7:,.0f}",  delta_fat)
-kc2.metric("Poke venduti 7gg",     f"{int(poke7):,}", delta_poke)
-kc3.metric("Utile lordo 7gg",      f"€ {util7:,.0f}", delta_util)
-kc4.metric("% Ingredienti media",  f"{ping7:.1f}%")
+kc1.metric(f"Fatturato ({label_7})",    f"€ {fat7:,.0f}",  delta_fat)
+kc2.metric(f"Poke venduti ({label_7})", f"{int(poke7):,}", delta_poke)
+kc3.metric(f"Utile lordo ({label_7})",  f"€ {util7:,.0f}", delta_util)
+kc4.metric("% Ingredienti media",       f"{ping7:.1f}%")
 
-# Obiettivo stagione
-fat_stagione = df[df['anno'] == anno_corrente]['fatturato'].sum()
+if n_7 < 5:
+    st.caption(f"ℹ️ Solo {n_7} giorni con fatturato registrato — i KPI si normalizzano con l'avanzare della stagione.")
+
+# KPI stagione in corso
+st.markdown("**📊 Stagione in corso**")
+fat_stagione = df_open['fatturato'].sum()
+ul_stagione  = df_open['utile_lordo'].sum()
+poke_stag    = df_open['poke_totali'].sum()
+giorni_stag  = len(df_open)
+
+delta_fat_stag = delta_ul_stag = None
+if anno_prec and not df_open.empty:
+    ult_mm_dd    = df_open['mm_dd'].max()
+    df_prev_open = df[(df['anno'] == anno_prec) & (df['fatturato'] > 0)]
+    df_prev_per  = df_prev_open[df_prev_open['mm_dd'] <= ult_mm_dd]
+    if not df_prev_per.empty:
+        def _delta_s(a, b):
+            return f"{(a - b) / b * 100:+.1f}% vs {anno_prec}" if b else None
+        delta_fat_stag = _delta_s(fat_stagione, df_prev_per['fatturato'].sum())
+        delta_ul_stag  = _delta_s(ul_stagione,  df_prev_per['utile_lordo'].sum())
+
+sc1, sc2, sc3, sc4 = st.columns(4)
+sc1.metric(f"Fatturato {anno_corrente}",  f"€ {fat_stagione:,.0f}", delta_fat_stag)
+sc2.metric("Utile lordo stagione",        f"€ {ul_stagione:,.0f}",  delta_ul_stag)
+sc3.metric("Poke venduti stagione",       f"{int(poke_stag):,}")
+sc4.metric("Giorni aperti",               str(giorni_stag))
+
 if obiettivo > 0:
-    st.markdown(f"**🎯 Stagione {anno_corrente}: € {fat_stagione:,.0f} / € {obiettivo:,.0f}**")
+    st.markdown(f"**🎯 Obiettivo {anno_corrente}: € {fat_stagione:,.0f} / € {obiettivo:,.0f}**")
     st.progress(min(fat_stagione / obiettivo, 1.0))
     if fat_stagione >= obiettivo:
         st.success(f"🏆 Obiettivo raggiunto! Hai superato di € {fat_stagione - obiettivo:,.0f}")
     else:
         mancano = obiettivo - fat_stagione
-        ultima_data = df[df['anno'] == anno_corrente]['data'].max()
+        ultima_data = df_open['data'].max() if not df_open.empty else df[df['anno'] == anno_corrente]['data'].max()
         fine_stagione = pd.Timestamp(date(anno_corrente, 9, 30))
         giorni_rimasti = (fine_stagione - ultima_data).days
         if giorni_rimasti > 0:
