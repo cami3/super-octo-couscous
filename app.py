@@ -158,7 +158,7 @@ def genera_csv_giornaliero():
         'Sesamo nero': (5,15), 'Sesamo bianco': (5,15), 'Mandorle': (10,25), 'nocciole': (10,25),
         'Cipolle croccanti': (8,20), 'Pistacchio': (15,35), 'Sale grosso': (2,6),
         'Salsa soya': (10,30), 'Olio Evo': (15,40), 'Teriyaki': (15,35),
-        'Maionese': (8,20), 'yogurt': (5,15), 'Ponzu': (10,25), 'Sriracha': (8,20),
+        'Maionese': (8,20), 'yogurt': (5,15), 'poke': (8,20), 'Ponzu': (10,25), 'Sriracha': (8,20),
     }
     _prot = set(CATEGORIE_ING['Proteine'])
     _freq_breve = {'iceberg','riso_sushi','riso_nero','Riso integrale','Avocado','Avo Hass','mango','Anguria','melone'}
@@ -446,7 +446,8 @@ kc1, kc2, kc3, kc4 = st.columns(4)
 kc1.metric(f"Fatturato ({label_7})",    f"€ {fat7:,.0f}",  delta_fat)
 kc2.metric(f"Poke venduti ({label_7})", f"{int(poke7):,}", delta_poke)
 kc3.metric(f"Utile lordo ({label_7})",  f"€ {util7:,.0f}", delta_util)
-kc4.metric("% Ingredienti media",       f"{ping7:.1f}%")
+kc4.metric("Ingredienti su fatturato",   f"{ping7:.1f}%",
+           help="Media dei giorni considerati. Sopra il 30% indica una settimana con rifornimenti pesanti o incassi bassi.")
 
 if n_7 < 5:
     st.caption(f"ℹ️ Solo {n_7} giorni con fatturato registrato — i KPI si normalizzano con l'avanzare della stagione.")
@@ -538,40 +539,46 @@ fig_stag.update_layout(
     margin=dict(t=50, b=10),
 )
 st.plotly_chart(fig_stag, use_container_width=True)
+st.caption("Media mobile a 3 giorni per smussare i picchi del weekend. I giorni chiusi appaiono come zero.")
 
-# Metriche aggregate stagione
+# Metriche aggregate stagione (solo giorni aperti per i costi fissi)
+n_open_anno = len(df_anno[df_anno['fatturato'] > 0])
 fat_tot  = df_anno['fatturato'].sum()
 ul_tot   = df_anno['utile_lordo'].sum()
-un_tot   = ul_tot - costi_fissi_gg * len(df_anno)
+un_tot   = ul_tot - costi_fissi_gg * n_open_anno
 poke_tot = df_anno['poke_totali'].sum()
 ric_poke = fat_tot / poke_tot if poke_tot > 0 else 0
 
 s1, s2, s3, s4 = st.columns(4)
 s1.metric("Fatturato stagione",    f"€ {fat_tot:,.0f}")
-s2.metric("Utile lordo",           f"€ {ul_tot:,.0f}")
+s2.metric("Utile lordo",           f"€ {ul_tot:,.0f}",
+          help="Fatturato meno ingredienti, bibite/sorbetti e dipendente. Non include i costi fissi.")
 s3.metric("Utile netto stimato",   f"€ {un_tot:,.0f}",
-          help=f"€ {costi_fissi_gg}/gg × {len(df_anno)} giorni = € {costi_fissi_gg * len(df_anno):,.0f} costi fissi")
-s4.metric("Ricavo medio per poke", f"€ {ric_poke:.2f}")
+          help=f"€ {costi_fissi_gg}/gg × {n_open_anno} giorni aperti = € {costi_fissi_gg * n_open_anno:,.0f} costi fissi")
+s4.metric("Incasso medio per poke", f"€ {ric_poke:.2f}",
+          help="Fatturato totale diviso poke venduti — indica il valore medio di ogni bowl.")
+st.caption(f"Utile netto calcolato su {n_open_anno} giorni aperti × € {costi_fissi_gg}/gg di costi fissi. Modifica la cifra nella sidebar se necessario.")
 
 # Tabella confronto multi-anno
 if len(anni) > 1:
     st.markdown("**Confronto stagioni**")
     righe = []
     for a in anni:
-        dfa = df[df['anno'] == a]
-        n   = len(dfa)
-        fat_a = dfa['fatturato'].sum()
-        ul_a  = dfa['utile_lordo'].sum()
+        dfa     = df[df['anno'] == a]
+        n_open  = len(dfa[dfa['fatturato'] > 0])
+        fat_a   = dfa['fatturato'].sum()
+        ul_a    = dfa['utile_lordo'].sum()
         righe.append({
-            'Anno': int(a),
-            'Fatturato': f"€ {fat_a:,.0f}",
-            'Utile lordo': f"€ {ul_a:,.0f}",
-            'Utile netto': f"€ {ul_a - costi_fissi_gg * n:,.0f}",
-            'Poke venduti': f"{int(dfa['poke_totali'].sum()):,}",
-            '% Ing. media': f"{dfa['pct_ingredienti'].mean():.1f}%",
-            'Giorni aperti': n,
+            'Anno':           int(a),
+            'Fatturato':      f"€ {fat_a:,.0f}",
+            'Utile lordo':    f"€ {ul_a:,.0f}",
+            'Utile netto':    f"€ {ul_a - costi_fissi_gg * n_open:,.0f}",
+            'Poke venduti':   f"{int(dfa['poke_totali'].sum()):,}",
+            'Ing. su fatt.':  f"{dfa[dfa['fatturato']>0]['pct_ingredienti'].mean():.1f}%",
+            'Giorni aperti':  n_open,
         })
     st.dataframe(pd.DataFrame(righe), hide_index=True, use_container_width=True)
+    st.caption("% ingredienti calcolata solo sui giorni aperti. Utile netto = utile lordo − costi fissi × giorni aperti.")
 
 st.divider()
 
@@ -653,11 +660,12 @@ with tab_v:
 
 # ── TAB COSTI ─────────────────────────────────────────────────────────────────
 with tab_c:
+    n_open_sel = len(df_sel[df_sel['fatturato'] > 0])
     fat = df_sel['fatturato'].sum()
     ing = df_sel['ing_dist'].sum()
     dip = df_sel['Dipendente'].sum()
     bib = df_sel['bib_sorb_costo'].sum()
-    cf  = costi_fissi_gg * len(df_sel)
+    cf  = costi_fissi_gg * n_open_sel
     ul  = fat - ing - dip - bib
     un  = ul - cf
 
@@ -667,7 +675,8 @@ with tab_c:
         st.metric("Ingredienti",     f"€ {ing:,.0f}", f"{safe_pct(ing, fat):.1f}% del fatturato")
         st.metric("Dipendente",      f"€ {dip:,.0f}", f"{safe_pct(dip, fat):.1f}%")
         st.metric("Bibite/Sorbetti", f"€ {bib:,.0f}", f"{safe_pct(bib, fat):.1f}%")
-        st.metric("Costi fissi",     f"€ {cf:,.0f}",  f"{safe_pct(cf,  fat):.1f}%")
+        st.metric("Costi fissi",     f"€ {cf:,.0f}",  f"{safe_pct(cf,  fat):.1f}%",
+                  help=f"€ {costi_fissi_gg}/gg × {n_open_sel} giorni aperti nel periodo")
         st.divider()
         st.metric("Utile lordo",     f"€ {ul:,.0f}",  f"{safe_pct(ul, fat):.1f}%")
         if un >= 0:
