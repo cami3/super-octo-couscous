@@ -710,57 +710,134 @@ with tab_c:
 with tab_f:
     if df_forn is None:
         st.info("👈 Carica il CSV Fornitori dalla sidebar per sbloccare questa sezione.")
+    elif df_forn.empty:
+        st.info("Il CSV fornitori è vuoto.")
     else:
-        df_f_sel = df_forn[
+        MIN_ORDINI_ANOMALIA = 5
+        MIN_ORDINI_TREND    = 6
+        MIN_FORNITORI_CONF  = 2
+
+        df_f_all = df_forn.copy()
+        df_f_per = df_forn[
             (df_forn['data'] >= start_sel) & (df_forn['data'] <= end_sel)
         ].copy()
 
-        if df_f_sel.empty:
-            st.info("Nessun ordine fornitore nel periodo selezionato.")
+        # ── 1. PREZZI DA MONITORARE ──────────────────────────────────────────
+        st.subheader("🚨 Prezzi da monitorare")
+        anomalie = []
+        for ing, grp in df_f_all.groupby('ingrediente'):
+            grp = grp.dropna(subset=['prezzo_unitario']).sort_values('data')
+            if len(grp) < MIN_ORDINI_ANOMALIA:
+                continue
+            media = grp['prezzo_unitario'].mean()
+            std   = grp['prezzo_unitario'].std()
+            ultimo = grp.iloc[-1]
+            if std > 0 and ultimo['prezzo_unitario'] > media + std:
+                pct = (ultimo['prezzo_unitario'] - media) / media * 100
+                anomalie.append({
+                    'Ingrediente':   ing,
+                    'Fornitore':     ultimo['fornitore'],
+                    'Ultimo ordine': ultimo['data'].strftime('%d/%m/%Y'),
+                    'Ultimo prezzo': f"€ {ultimo['prezzo_unitario']:.2f}",
+                    'Media storica': f"€ {media:.2f}",
+                    'Δ':             f"+{pct:.0f}%",
+                })
+        if anomalie:
+            st.dataframe(pd.DataFrame(anomalie), hide_index=True, use_container_width=True)
         else:
-            ing_dispo = sorted(df_f_sel['ingrediente'].dropna().unique())
-            scelta = st.selectbox("Ingrediente", ['— tutti —'] + ing_dispo)
-            df_f = df_f_sel if scelta == '— tutti —' else df_f_sel[df_f_sel['ingrediente'] == scelta].copy()
-
-            st.subheader("Prezzo unitario nel tempo")
-            fig_sc = px.scatter(
-                df_f, x='data', y='prezzo_unitario', color='ingrediente',
-                size='spesa', hover_data=['fornitore', 'quantita', 'unita', 'spesa'],
-                labels={'prezzo_unitario': '€/unità', 'data': ''},
+            n_monitorati = sum(
+                1 for _, grp in df_f_all.groupby('ingrediente')
+                if len(grp.dropna(subset=['prezzo_unitario'])) >= MIN_ORDINI_ANOMALIA
             )
-            if scelta != '— tutti —' and len(df_f) > 2:
-                x_num = [(d - df_f['data'].min()).days for d in df_f['data']]
-                y_num = df_f['prezzo_unitario'].tolist()
-                if len(y_num) == len(x_num) and not any(v != v for v in y_num):
-                    slope, intercept = ols_manuale(x_num, y_num)
-                    fig_sc.add_trace(go.Scatter(
-                        x=df_f['data'],
-                        y=[intercept + slope * xi for xi in x_num],
-                        mode='lines', name='Trend',
-                        line=dict(color='red', dash='dot', width=1.5)
-                    ))
-            st.plotly_chart(fig_sc, use_container_width=True)
+            if n_monitorati == 0:
+                st.caption(
+                    f"ℹ️ Servono almeno {MIN_ORDINI_ANOMALIA} ordini per ingrediente per attivare "
+                    f"il monitoraggio prezzi. Continua a registrare gli acquisti!"
+                )
+            else:
+                st.success(f"✅ Nessuna anomalia — prezzi nella norma su {n_monitorati} ingredienti monitorati.")
 
-            if scelta != '— tutti —':
-                media_p = df_f['prezzo_unitario'].mean()
-                std_p   = df_f['prezzo_unitario'].std()
-                if pd.notna(std_p) and std_p > 0:
-                    for _, r in df_f[df_f['prezzo_unitario'] > media_p + std_p].iterrows():
-                        pct = (r['prezzo_unitario'] - media_p) / media_p * 100
-                        st.warning(
-                            f"⚠️ **{r['data'].strftime('%d/%m/%Y')}** — {r['ingrediente']} "
-                            f"da *{r['fornitore']}*: € {r['prezzo_unitario']:.2f}/u "
-                            f"(+{pct:.0f}% rispetto alla media)"
-                        )
+        # ── 2. LISTINO DI RIFERIMENTO ────────────────────────────────────────
+        st.subheader("📋 Listino di riferimento")
+        listino = []
+        for ing, grp in df_f_all.groupby('ingrediente'):
+            grp = grp.dropna(subset=['prezzo_unitario']).sort_values('data')
+            if grp.empty:
+                continue
+            n      = len(grp)
+            ultimo = grp.iloc[-1]
+            row = {
+                'Ingrediente':   ing,
+                'Ultimo ordine': ultimo['data'].strftime('%d/%m/%Y'),
+                'Fornitore':     ultimo['fornitore'],
+                'Unità':         ultimo.get('unita', ''),
+                'Ultimo €/u':    round(ultimo['prezzo_unitario'], 2),
+            }
+            if n >= 2:
+                row['Media €/u'] = round(grp['prezzo_unitario'].mean(), 2)
+            if n >= 3:
+                row['Minimo €/u'] = round(grp['prezzo_unitario'].min(), 2)
+            if n < MIN_ORDINI_ANOMALIA:
+                row['Stato'] = f"🔵 {n}/{MIN_ORDINI_ANOMALIA} ordini"
+            else:
+                media = grp['prezzo_unitario'].mean()
+                std   = grp['prezzo_unitario'].std()
+                row['Stato'] = (
+                    "🔴 sopra media" if (std > 0 and ultimo['prezzo_unitario'] > media + std)
+                    else "🟢 nella norma"
+                )
+            listino.append(row)
 
-            st.subheader("Spesa totale per fornitore")
-            sp = df_f.groupby('fornitore')['spesa'].sum().reset_index().sort_values('spesa', ascending=False)
-            sp.columns = ['Fornitore', 'Spesa totale (€)']
-            st.dataframe(sp, hide_index=True, use_container_width=True)
+        if listino:
+            st.dataframe(
+                pd.DataFrame(listino).sort_values('Ingrediente'),
+                hide_index=True, use_container_width=True
+            )
+            st.caption("🔵 dati insufficienti per analisi statistica  ·  🟢 prezzo normale  ·  🔴 sopra la media storica")
 
-            st.subheader("Tutti gli ordini")
-            cols_show = [c for c in ['data','ingrediente','fornitore','quantita','unita','spesa','prezzo_unitario'] if c in df_f.columns]
-            st.dataframe(df_f[cols_show].round(2), hide_index=True, use_container_width=True)
+        # ── 3. CONFRONTO FORNITORI ───────────────────────────────────────────
+        ing_multi = [
+            ing for ing, grp in df_f_all.groupby('ingrediente')
+            if grp['fornitore'].nunique() >= MIN_FORNITORI_CONF
+        ]
+        if ing_multi:
+            st.subheader("🏪 Confronto fornitori")
+            pivot = (
+                df_f_all[df_f_all['ingrediente'].isin(ing_multi)]
+                .groupby(['ingrediente', 'fornitore'])['prezzo_unitario']
+                .mean().round(2).reset_index()
+                .pivot(index='ingrediente', columns='fornitore', values='prezzo_unitario')
+            )
+            st.dataframe(pivot, use_container_width=True)
+            st.caption("Prezzo medio (€/unità) per ingrediente × fornitore")
+
+        # ── 4. ANALISI DETTAGLIATA ───────────────────────────────────────────
+        with st.expander("📊 Analisi dettagliata nel periodo selezionato"):
+            ing_dispo = sorted(df_f_all['ingrediente'].dropna().unique())
+            scelta = st.selectbox("Ingrediente", ['— tutti —'] + ing_dispo, key='forn_det')
+            df_f = df_f_per if scelta == '— tutti —' else df_f_all[df_f_all['ingrediente'] == scelta].copy()
+            if df_f.empty:
+                st.info("Nessun dato per questa selezione.")
+            else:
+                fig_sc = px.scatter(
+                    df_f, x='data', y='prezzo_unitario', color='ingrediente',
+                    size='spesa', hover_data=['fornitore', 'quantita', 'unita', 'spesa'],
+                    labels={'prezzo_unitario': '€/unità', 'data': ''},
+                )
+                if scelta != '— tutti —' and len(df_f) >= MIN_ORDINI_TREND:
+                    x_num = [(d - df_f['data'].min()).days for d in df_f['data']]
+                    y_num = df_f['prezzo_unitario'].tolist()
+                    if not any(v != v for v in y_num):
+                        slope, intercept = ols_manuale(x_num, y_num)
+                        fig_sc.add_trace(go.Scatter(
+                            x=df_f['data'],
+                            y=[intercept + slope * xi for xi in x_num],
+                            mode='lines', name='Trend',
+                            line=dict(color='red', dash='dot', width=1.5)
+                        ))
+                st.plotly_chart(fig_sc, use_container_width=True)
+                cols_show = [c for c in ['data','ingrediente','fornitore','quantita','unita','spesa','prezzo_unitario'] if c in df_f.columns]
+                st.dataframe(df_f[cols_show].round(2), hide_index=True, use_container_width=True)
 
 # ── TAB RIFORNIMENTI ──────────────────────────────────────────────────────────
 with tab_r:
