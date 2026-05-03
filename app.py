@@ -513,33 +513,38 @@ with col_cb:
 df_anno = df[df['anno'] == anno_sel].copy()
 
 # Curva fatturato con eventuale overlay anno precedente
+# Usiamo "2000-" + mm_dd come anno fittizio per dare a Plotly date ISO valide;
+# i tick vengono formattati gg/mm così l'asse mostra solo giorno e mese.
+def _x_stag(frame):
+    return pd.to_datetime('2000-' + frame['mm_dd'], errors='coerce')
+
 fig_stag = go.Figure()
 fig_stag.add_trace(go.Scatter(
-    x=df_anno['mm_dd'],
+    x=_x_stag(df_anno),
     y=df_anno['fatturato'].rolling(3, center=True, min_periods=1).mean(),
     mode='lines', name=str(anno_sel),
     line=dict(color='#e85d04', width=2.5),
     fill='tozeroy', fillcolor='rgba(232,93,4,0.08)',
-    hovertemplate='%{x} — € %{y:,.0f}<extra></extra>',
+    hovertemplate='%{x|%d/%m} — € %{y:,.0f}<extra></extra>',
 ))
 if mostra_yoy and anno_prec:
     df_prev_stag = df[df['anno'] == anno_prec].copy()
     fig_stag.add_trace(go.Scatter(
-        x=df_prev_stag['mm_dd'],
+        x=_x_stag(df_prev_stag),
         y=df_prev_stag['fatturato'].rolling(3, center=True, min_periods=1).mean(),
         mode='lines', name=str(anno_prec),
         line=dict(color='#aaa', width=1.5, dash='dot'),
-        hovertemplate='%{x} — € %{y:,.0f}<extra></extra>',
+        hovertemplate='%{x|%d/%m} — € %{y:,.0f}<extra></extra>',
     ))
 fig_stag.update_layout(
-    title="Fatturato giornaliero (media mobile 3gg)",
-    xaxis=dict(title=None, tickangle=-30),
+    title=f"Fatturato giornaliero {anno_sel} (media mobile 3gg)",
+    xaxis=dict(title=None, tickangle=-30, tickformat='%d/%m'),
     yaxis_title="€", hovermode='x unified',
     legend=dict(orientation='h', y=1.02),
     margin=dict(t=50, b=10),
 )
 st.plotly_chart(fig_stag, use_container_width=True)
-st.caption("Media mobile a 3 giorni per smussare i picchi del weekend. I giorni chiusi appaiono come zero.")
+st.caption("Media mobile a 3 giorni per smussare i picchi del weekend. I giorni chiusi appaiono come zero. La linea tratteggiata è l'anno precedente sullo stesso calendario.")
 
 # Metriche aggregate stagione (solo giorni aperti per i costi fissi)
 n_open_anno = len(df_anno[df_anno['fatturato'] > 0])
