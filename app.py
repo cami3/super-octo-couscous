@@ -42,6 +42,93 @@ I costi degli ingredienti vengono **distribuiti tra due approvvigionamenti succe
 """)
 
 uploaded = st.file_uploader("📥 Carica file CSV giornaliero", type=["csv"])
+
+# --- TEMPLATE PREVIEW ---
+with st.expander("📋 Come deve essere fatto il file CSV? (clicca per vedere)", expanded=not uploaded):
+    st.markdown("""
+### Formato del file CSV
+
+- Separatore: **punto e virgola** `;`
+- Date nel formato **gg/mm/aaaa** (es. `01/07/2024`)
+- Decimali con la **virgola** o il **punto** (es. `12,50` o `12.50`)
+- Celle **vuote** = giorno chiuso o ingrediente non rifornito quel giorno
+- **Non usare 0** per i giorni di chiusura — lasciare la cella vuota
+
+---
+
+#### Gruppi di colonne
+
+| Gruppo | Colonne | Compilazione | Cosa inserire |
+|---|---|---|---|
+| **Data** | `data` | Ogni giorno aperto | Data nel formato gg/mm/aaaa |
+| **Ricavo** | `fatturato` | Ogni giorno aperto | Totale incassato in € |
+| **Personale** | `Dipendente` | Ogni giorno aperto | Costo dipendente in € |
+| **Poke venduti** | `poke_reglular`, `poke_maxi`, `poke_baby`, `fruit_bowl`, `poke_veggy` | Ogni giorno aperto | Numero di pezzi venduti |
+| **Extra venduti** | `Avocado_venduto`, `Feta_venduto`, `Philad_venduto`, `Gomawak_venduto` | Ogni giorno aperto | € incassati per ogni extra |
+| **Sorbetti venduti** | `Sorbetti_venduti` | Ogni giorno aperto | Numero di pezzi venduti |
+| **Bibite (costo)** | `Acqua nat`, `Acqua gas`, `Coca cola`, `Coca zero`, `corona`, `ichnusa`, `fanta`, `Estathe limone`, `Estathe pesca` | Ogni giorno aperto | € spesi per ogni bibita |
+| **Sorbetti (costo)** | `Sorbetto limone`, `Sorbetto mela`, `Sorbetto mango` | Ogni giorno aperto | € spesi per ogni gusto |
+| **Ingredienti** | salmone, tonno, Avocado, riso_sushi, … (vedi lista completa) | Solo nei giorni di **rifornimento** | € spesi per quell'acquisto |
+
+> 💡 Gli ingredienti vengono automaticamente **distribuiti** tra un rifornimento e il successivo.
+> Lascia la cella vuota nei giorni in cui non hai comprato quell'ingrediente.
+
+---
+""")
+
+    all_cols = (
+        ['data', 'fatturato', 'Dipendente']
+        + ['poke_reglular','poke_maxi','poke_baby','fruit_bowl','poke_veggy']
+        + ['Avocado_venduto','Feta_venduto','Philad_venduto','Gomawak_venduto']
+        + ['Sorbetti_venduti']
+        + ['Acqua nat','Acqua gas','Coca cola','Coca zero','corona','ichnusa','fanta','Estathe limone','Estathe pesca']
+        + ['Sorbetto limone','Sorbetto mela','Sorbetto mango']
+        + ['salmone','tonno','Tonno Saku','Polpo','Gamberetti','Pollo Nuggets','Pollo fette','Feta','Formaggio spalmabile','Tofu','Uova']
+        + ['edamame','ceci','mais','carote','cetrioli','pomodori','Cavolo viola','zucchine','cipolle','Goma wakame']
+        + ['Avocado','Avo Hass','mango','Lime','uva','Mele','melone','Kiwi','Ananas','Anguria']
+        + ['iceberg','riso_sushi','riso_nero','Riso integrale']
+        + ['Sesamo nero','Sesamo bianco','Mandorle','nocciole','Cipolle croccanti','Pistacchio','Sale grosso']
+        + ['Salsa soya','Olio Evo','Teriyaki','Maionese','yogurt','Ponzu','Sriracha']
+    )
+
+    esempio = {
+        'data':             ['01/07/2024',  '02/07/2024',  '03/07/2024'],
+        'fatturato':        [850,            920,            ''],
+        'Dipendente':       [80,             80,             ''],
+        'poke_reglular':    [25,             28,             ''],
+        'poke_maxi':        [12,             14,             ''],
+        'poke_baby':        [8,              7,              ''],
+        'fruit_bowl':       [3,              4,              ''],
+        'poke_veggy':       [4,              5,              ''],
+        'Avocado_venduto':  [5,              6,              ''],
+        'Feta_venduto':     [2,              3,              ''],
+        'Philad_venduto':   [3,              2,              ''],
+        'Gomawak_venduto':  [1,              2,              ''],
+        'Sorbetti_venduti': [15,             18,             ''],
+        'Acqua nat':        [1.2,            1.6,            ''],
+        'Coca cola':        [2.5,            3.0,            ''],
+        'Sorbetto limone':  [4.5,            '',             ''],
+        'salmone':          [120,            '',             ''],
+        'tonno':            [80,             '',             ''],
+        'riso_sushi':       [18,             '',             ''],
+        'Avocado':          [15,             '',             ''],
+    }
+    df_template = pd.DataFrame(esempio)
+
+    st.markdown("**Esempio (solo le colonne principali — le altre seguono lo stesso schema):**")
+    st.dataframe(df_template, use_container_width=True, hide_index=True)
+    st.caption("Le righe con celle vuote indicano giorni chiusi o ingredienti non riforniti quel giorno.")
+
+    template_csv = ';'.join(all_cols) + '\n'
+    template_csv += ';'.join(['gg/mm/aaaa'] + [''] * (len(all_cols) - 1)) + '\n'
+    st.download_button(
+        "⬇️ Scarica template CSV vuoto",
+        data=template_csv.encode('utf-8'),
+        file_name="template_poketogo.csv",
+        mime="text/csv",
+        help="Apri con Excel, compila e salva come CSV separato da punto e virgola"
+    )
+
 if not uploaded:
     st.stop()
 
@@ -63,7 +150,7 @@ sorbetti_pezzi_col = ['Sorbetti_venduti']
 bibite_cols = ['Acqua nat','Acqua gas','Coca cola','Coca zero','corona','ichnusa','fanta','Estathe limone','Estathe pesca']
 sorbetti_cols = ['Sorbetto limone','Sorbetto mela','Sorbetto mango']
 cost_cols = ['Dipendente']
-exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + cost_cols + ['data','fatturato']
+exclude = poke_cols + extra_cols + bibite_cols + sorbetti_cols + sorbetti_pezzi_col + cost_cols + ['data','fatturato']
 ingred_cols = [c for c in df.columns if c not in exclude]
 
 # --- 🧾 CONTROLLO QUALITÀ DEL FILE CARICATO ---
@@ -241,7 +328,7 @@ df['ingredienti_grezzi'] = df[ingred_cols].sum(axis=1)
 df['% ingredienti grezzi'] = df.apply(lambda r: safe_pct(r['ingredienti_grezzi'], r['fatturato']), axis=1)
 
 
-df_sel = df[(df['data'] >= start) & (df['data'] <= end)]
+df_sel = df[(df['data'] >= start) & (df['data'] <= end)].copy()
 df_prev = df[(df['data'] >= prev_start) & (df['data'] <= prev_end)]
 df_dist_with_date = df[['data']].join(df_dist)
 df_dist_sel = df_dist_with_date[(df_dist_with_date['data'] >= start) & (df_dist_with_date['data'] <= end)]
@@ -489,7 +576,7 @@ with tabs[8]:
     default_index = cat_keys.index(st.session_state.get("cat_sel", "Tutti"))
     cat_sel = st.selectbox("🧂 Filtra per categoria", cat_keys, index=default_index, key="cat_sel")
 
-    col_sel = categorie[cat_sel]
+    col_sel = [c for c in categorie[cat_sel] if c in df_sel.columns]
     df_rif = df_sel[['data'] + col_sel].copy()
     df_rif = df_rif[(df_rif[col_sel] > 0).any(axis=1)]
 
@@ -524,7 +611,7 @@ with tabs[8]:
 
     # --- 🔢 Confronto categorie (extra)
     st.subheader("🔢 Spesa Totale per Categoria")
-    cat_sums = {cat: df[cols].sum().sum() for cat, cols in categorie.items() if cat != 'Tutti'}
+    cat_sums = {cat: df_sel[[c for c in cols if c in df_sel.columns]].sum().sum() for cat, cols in categorie.items() if cat != 'Tutti'}
     df_cat_sums = pd.DataFrame(list(cat_sums.items()), columns=['Categoria', 'Spesa Totale (€)'])
     fig_pie = px.pie(df_cat_sums, values='Spesa Totale (€)', names='Categoria', title="📉 Distribuzione Spesa per Categoria")
     st.plotly_chart(fig_pie, use_container_width=True)
