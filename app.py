@@ -370,23 +370,39 @@ anno_prec     = int(anni[-2]) if len(anni) > 1 else None
 # ── CONTROLLO QUALITÀ ─────────────────────────────────────────────────────────
 
 with st.expander("🔍 Controllo qualità file", expanded=False):
-    campi = [c for c in ['fatturato', 'Dipendente'] + POKE_COLS + EXTRA_COLS if c in df.columns]
     avvisi = 0
-    for col in campi:
-        nan_dates = df.loc[df[col].isna(), 'data'].dt.strftime('%d/%m/%Y').tolist()
-        if nan_dates:
-            st.warning(f"⚠️ **{col}** vuoto in {len(nan_dates)} giorni → {', '.join(nan_dates[:5])}")
-            avvisi += 1
-    _vend = df[[c for c in POKE_COLS + EXTRA_COLS if c in df.columns]].sum(axis=1)
-    for cond, msg in [
-        ((df['fatturato'] > 0) & (_vend == 0), "💸 Fatturato > 0 ma nessuna vendita registrata"),
-        ((df['fatturato'] == 0) & (_vend > 0), "📜 Vendite > 0 ma fatturato = 0"),
-    ]:
-        if cond.any():
-            st.warning(msg + " in: " + ', '.join(df.loc[cond, 'data'].dt.strftime('%d/%m/%Y').tolist()[:5]))
-            avvisi += 1
+    def _date_str(cond):
+        return ', '.join(df.loc[cond, 'data'].dt.strftime('%d/%m/%Y').tolist()[:5])
+
+    # Date duplicate
+    dup = df[df.duplicated('data', keep=False)]
+    if not dup.empty:
+        n_dup = dup['data'].nunique()
+        st.warning(f"⚠️ {n_dup} date inserite più di una volta: {', '.join(dup['data'].dt.strftime('%d/%m/%Y').unique()[:5])}")
+        avvisi += 1
+
+    # Fatturato > 0 ma zero poke registrati
+    cond_fat_no_poke = (df['fatturato'] > 0) & (df['poke_totali'] == 0)
+    if cond_fat_no_poke.any():
+        st.warning(f"⚠️ {cond_fat_no_poke.sum()} giorni con incasso registrato ma nessun poke nel conteggio: {_date_str(cond_fat_no_poke)}")
+        avvisi += 1
+
+    # Poke > 0 ma fatturato assente o zero
+    cond_poke_no_fat = (df['poke_totali'] > 0) & (df['fatturato'].fillna(0) == 0)
+    if cond_poke_no_fat.any():
+        st.warning(f"⚠️ {cond_poke_no_fat.sum()} giorni con poke registrati ma incasso assente: {_date_str(cond_poke_no_fat)}")
+        avvisi += 1
+
+    # Fatturato non compilato su giorni con costi ingredienti presenti
+    cond_fat_nan = df['fatturato'].isna() & (df['ing_dist'] > 0)
+    if cond_fat_nan.any():
+        st.warning(f"⚠️ {cond_fat_nan.sum()} giorni con rifornimenti registrati ma incasso non compilato: {_date_str(cond_fat_nan)}")
+        avvisi += 1
+
     if avvisi == 0:
         st.success("✅ Nessuna anomalia rilevata.")
+    else:
+        st.caption("Controlla queste righe nel CSV — potrebbero essere errori di inserimento.")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SEZIONE 1 — BRIEFING OPERATIVO
