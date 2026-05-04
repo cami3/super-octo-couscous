@@ -112,13 +112,20 @@ def carica_giornaliero(file_bytes: bytes) -> tuple:
     for col in df.columns:
         if col != 'data':
             df[col] = pd.to_numeric(df[col], errors='coerce')
-    ingred_cols = [c for c in df.columns if c not in EXCLUDE_COLS]
+
+    # Rileva tutte le colonne dipendente (Dipendente, Dipendente2, ecc.) e le somma
+    dip_cols = [c for c in df.columns if c.lower().startswith('dipendente')]
+    df['Dipendente'] = df[dip_cols].sum(axis=1).fillna(0) if dip_cols else 0.0
+
+    # Ingredienti = tutto ciò che non è una colonna nota — escluse anche le extra dip_cols
+    exclude_dyn = EXCLUDE_COLS | set(dip_cols)
+    ingred_cols = [c for c in df.columns if c not in exclude_dyn]
+
     df_dist = distribuisci_costi(df, ingred_cols)
     df['ing_dist']       = df_dist.sum(axis=1)
     df['bib_sorb_costo'] = df[[c for c in BIBITE_COLS + SORBETTI_COLS if c in df.columns]].sum(axis=1)
     df['poke_totali']    = df[[c for c in POKE_COLS if c in df.columns]].sum(axis=1).fillna(0)
     df['extra_totali']   = df[[c for c in EXTRA_COLS if c in df.columns]].sum(axis=1).fillna(0)
-    df['Dipendente']     = df['Dipendente'].fillna(0)
     df['utile_lordo']    = df['fatturato'] - df['ing_dist'] - df['bib_sorb_costo'] - df['Dipendente']
     df['pct_ingredienti'] = df.apply(lambda r: safe_pct(r['ing_dist'],   r['fatturato']), axis=1)
     df['pct_dipendenti']  = df.apply(lambda r: safe_pct(r['Dipendente'], r['fatturato']), axis=1)
@@ -398,6 +405,17 @@ with st.expander("🔍 Controllo qualità file", expanded=False):
     if cond_fat_nan.any():
         st.warning(f"⚠️ {cond_fat_nan.sum()} giorni con rifornimenti registrati ma incasso non compilato: {_date_str(cond_fat_nan)}")
         avvisi += 1
+
+    # Colonne dipendente extra rilevate
+    dip_extra = [c for c in df.columns if c.lower().startswith('dipendente') and c != 'Dipendente']
+    if dip_extra:
+        st.info(f"ℹ️ Rilevate {len(dip_extra)+1} colonne dipendente ({', '.join(['Dipendente']+dip_extra)}) — sommate automaticamente nel costo lavoro.")
+
+    # Ingredienti non classificati in nessuna categoria
+    ing_noti_qc = set(sum(CATEGORIE_ING.values(), []))
+    ing_nuovi = [c for c in ingred_cols if c not in ing_noti_qc]
+    if ing_nuovi:
+        st.info(f"ℹ️ {len(ing_nuovi)} ingredienti non ancora categorizzati (appaiono in Rifornimenti → Tutti): {', '.join(ing_nuovi[:8])}")
 
     if avvisi == 0:
         st.success("✅ Nessuna anomalia rilevata.")
@@ -880,8 +898,15 @@ with tab_f:
 
 # ── TAB RIFORNIMENTI ──────────────────────────────────────────────────────────
 with tab_r:
-    cat_r  = st.selectbox("Categoria", ['Tutti'] + list(CATEGORIE_ING.keys()), key='cat_r')
-    cols_r = ingred_cols if cat_r == 'Tutti' else [c for c in CATEGORIE_ING.get(cat_r, []) if c in df_sel.columns]
+    # Ingredienti non classificati in nessuna categoria → categoria "Altri" dinamica
+    ing_noti = set(sum(CATEGORIE_ING.values(), []))
+    ing_altri = [c for c in ingred_cols if c not in ing_noti and c in df_sel.columns]
+    categorie_r = dict(CATEGORIE_ING)
+    if ing_altri:
+        categorie_r['Altri'] = ing_altri
+
+    cat_r  = st.selectbox("Categoria", ['Tutti'] + list(categorie_r.keys()), key='cat_r')
+    cols_r = ingred_cols if cat_r == 'Tutti' else [c for c in categorie_r.get(cat_r, []) if c in df_sel.columns]
 
     df_rif = df_sel[['data'] + cols_r].copy()
     df_rif = df_rif[(df_rif[cols_r] > 0).any(axis=1)]
