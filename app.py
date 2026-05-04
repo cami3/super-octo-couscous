@@ -330,15 +330,15 @@ with st.sidebar:
         st.download_button("⬇️ Template giornaliero vuoto",
                            data=template_csv.encode('utf-8'),
                            file_name="template_giornaliero.csv", mime="text/csv",
-                           use_container_width=True)
+                           width="stretch")
         st.download_button("🎲 Dati esempio giornaliero (2024–2025)",
                            data=genera_csv_giornaliero(),
                            file_name="esempio_giornaliero.csv", mime="text/csv",
-                           use_container_width=True)
+                           width="stretch")
         st.download_button("🎲 Dati esempio fornitori (2024–2025)",
                            data=genera_csv_fornitori(),
                            file_name="esempio_fornitori.csv", mime="text/csv",
-                           use_container_width=True)
+                           width="stretch")
         st.markdown("""
 **CSV Giornaliero** — separatore `;`, date `gg/mm/aaaa`
 Ingredienti: compila solo nei giorni di rifornimento.
@@ -577,7 +577,7 @@ fig_stag.update_layout(
     legend=dict(orientation='h', y=1.02),
     margin=dict(t=50, b=10),
 )
-st.plotly_chart(fig_stag, use_container_width=True)
+st.plotly_chart(fig_stag, width="stretch")
 st.caption("Media mobile a 3 giorni per smussare i picchi del weekend. I giorni chiusi appaiono come zero. La linea tratteggiata è l'anno precedente sullo stesso calendario.")
 
 # Metriche aggregate stagione (solo giorni aperti per i costi fissi)
@@ -616,7 +616,7 @@ if len(anni) > 1:
             'Ing. su fatt.':  f"{dfa[dfa['fatturato']>0]['pct_ingredienti'].mean():.1f}%",
             'Giorni aperti':  n_open,
         })
-    st.dataframe(pd.DataFrame(righe), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(righe), hide_index=True, width="stretch")
     st.caption("% ingredienti calcolata solo sui giorni aperti. Utile netto = utile lordo − costi fissi × giorni aperti.")
 
 st.divider()
@@ -663,7 +663,7 @@ with tab_v:
     st.plotly_chart(
         px.bar(melt_poke, x='data', y='Pezzi', color='Tipo', barmode='stack',
                labels={'data': ''}, title="Poke venduti per tipo"),
-        use_container_width=True
+        width="stretch"
     )
     st.caption("Composizione giornaliera delle vendite per formato. Passa il mouse su una barra per vedere i dettagli.")
 
@@ -683,7 +683,7 @@ with tab_v:
         xaxis_title=None, yaxis_title="€",
         hovermode='x unified', legend=dict(orientation='h')
     )
-    st.plotly_chart(fig_duo, use_container_width=True)
+    st.plotly_chart(fig_duo, width="stretch")
     st.caption("Utile lordo = fatturato − ingredienti − bibite/sorbetti − dipendente. I giorni sotto la linea rossa non coprono i costi variabili.")
 
     df_sel['margine_per_poke'] = df_sel.apply(
@@ -694,7 +694,7 @@ with tab_v:
     ].copy()
     top5.columns = ['Data', 'Fatturato (€)', 'Poke', 'Margine/poke (€)', 'Utile lordo (€)']
     st.subheader("💰 Top 5 giorni per margine per poke")
-    st.dataframe(top5.round(2), hide_index=True, use_container_width=True)
+    st.dataframe(top5.round(2), hide_index=True, width="stretch")
     st.caption("I giorni con il margine più alto per singolo poke — quelli da replicare.")
 
 # ── TAB COSTI ─────────────────────────────────────────────────────────────────
@@ -734,7 +734,7 @@ with tab_c:
             color_discrete_sequence=['#e07b39', '#4a90d9', '#9b59b6', '#95a5a6', '#2d6a4f']
         )
         fig_pie.update_layout(margin=dict(t=10, b=10))
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, width="stretch")
         st.caption("Distribuzione del fatturato nel periodo. L'utile netto è la fetta che rimane dopo tutti i costi.")
 
     melt_pct = df_sel[['data', 'pct_ingredienti', 'pct_dipendenti']].melt(
@@ -745,7 +745,7 @@ with tab_c:
     fig_pct.add_hline(y=25, line_dash='dash', line_color='orange', annotation_text='Soglia 25%')
     fig_pct.update_layout(xaxis_title=None, yaxis_title='% sul fatturato',
                           legend=dict(orientation='h'))
-    st.plotly_chart(fig_pct, use_container_width=True)
+    st.plotly_chart(fig_pct, width="stretch")
     st.caption("Andamento giornaliero dei costi variabili principali. Giorni sopra la soglia arancione (25%) indicano margini compressi — tipico a inizio stagione o nelle giornate lente.")
 
     ing_avail = [c for c in ingred_cols if c in df_dist_sel.columns]
@@ -757,7 +757,7 @@ with tab_c:
         fig_top.update_traces(texttemplate='€%{text:.2f}', textposition='outside',
                               marker_color='#e85d04')
         fig_top.update_layout(xaxis_title=None)
-        st.plotly_chart(fig_top, use_container_width=True)
+        st.plotly_chart(fig_top, width="stretch")
         st.caption("Costo medio giornaliero per ingrediente, calcolato distribuendo ogni rifornimento sui giorni fino al successivo acquisto. Indica dove si concentra la spesa ingredienti.")
 
 # ── TAB FORNITORI ─────────────────────────────────────────────────────────────
@@ -799,7 +799,7 @@ with tab_f:
                     'Δ':             f"+{pct:.0f}%",
                 })
         if anomalie:
-            st.dataframe(pd.DataFrame(anomalie), hide_index=True, use_container_width=True)
+            st.dataframe(pd.DataFrame(anomalie), hide_index=True, width="stretch")
         else:
             n_monitorati = sum(
                 1 for _, grp in df_f_all.groupby('ingrediente')
@@ -848,7 +848,7 @@ with tab_f:
         if listino:
             st.dataframe(
                 pd.DataFrame(listino).sort_values('Ingrediente'),
-                hide_index=True, use_container_width=True
+                hide_index=True, width="stretch"
             )
             st.caption("🔵 dati insufficienti per analisi statistica  ·  🟢 prezzo normale  ·  🔴 sopra la media storica")
 
@@ -865,7 +865,7 @@ with tab_f:
                 .mean().round(2).reset_index()
                 .pivot(index='ingrediente', columns='fornitore', values='prezzo_unitario')
             )
-            st.dataframe(pivot, use_container_width=True)
+            st.dataframe(pivot, width="stretch")
             st.caption("Prezzo medio (€/unità) per ingrediente × fornitore")
 
         # ── 4. ANALISI DETTAGLIATA ───────────────────────────────────────────
@@ -892,9 +892,9 @@ with tab_f:
                             mode='lines', name='Trend',
                             line=dict(color='red', dash='dot', width=1.5)
                         ))
-                st.plotly_chart(fig_sc, use_container_width=True)
+                st.plotly_chart(fig_sc, width="stretch")
                 cols_show = [c for c in ['data','ingrediente','fornitore','quantita','unita','spesa','prezzo_unitario'] if c in df_f.columns]
-                st.dataframe(df_f[cols_show].round(2), hide_index=True, use_container_width=True)
+                st.dataframe(df_f[cols_show].round(2), hide_index=True, width="stretch")
 
 # ── TAB RIFORNIMENTI ──────────────────────────────────────────────────────────
 with tab_r:
@@ -919,7 +919,7 @@ with tab_r:
         st.plotly_chart(
             px.bar(melted_r, x='data', y='Spesa (€)', color='Ingrediente', barmode='stack',
                    title="Spese di rifornimento per ingrediente", labels={'data': ''}),
-            use_container_width=True
+            width="stretch"
         )
         st.caption("Ogni barra corrisponde a un giorno di acquisto. Compila la cella dell'ingrediente solo nel giorno in cui lo rifornisci — il costo viene distribuito automaticamente fino al rifornimento successivo.")
 
@@ -928,14 +928,14 @@ with tab_r:
         st.plotly_chart(
             px.line(daily_r, x='data', y='Cumulata (€)', markers=True,
                     title="Spesa cumulata rifornimenti", labels={'data': ''}),
-            use_container_width=True
+            width="stretch"
         )
         st.caption("Totale investito in acquisti ingredienti dall'inizio del periodo — utile per confrontare la spesa tra stagioni o monitorare il budget.")
 
         totali_ing = melted_r.groupby('Ingrediente')['Spesa (€)'].sum().reset_index()
         totali_ing = totali_ing.sort_values('Spesa (€)', ascending=False).round(2)
         totali_ing.columns = ['Ingrediente', 'Totale periodo (€)']
-        st.dataframe(totali_ing, hide_index=True, use_container_width=True)
+        st.dataframe(totali_ing, hide_index=True, width="stretch")
         st.caption("Spesa totale per ingrediente nel periodo selezionato.")
 
 # ── TAB GIORNATE CRITICHE ─────────────────────────────────────────────────────
@@ -979,13 +979,16 @@ with tab_cr:
         critici['Giorno']  = critici['data'].dt.weekday.map(GIORNI_IT)
         critici['Motivo']  = critici.apply(_motivo, axis=1)
         st.info(f"{len(critici)} giorni da monitorare su {len(df_sel_open)} giorni aperti ({len(critici)/len(df_sel_open)*100:.0f}%)")
+        _num = ['fatturato','poke_totali','pct_ingredienti','pct_dipendenti','utile_lordo']
+        _disp = critici[['data','Giorno']+_num+['Motivo']].copy()
+        _disp[_num] = _disp[_num].round(1)
         st.dataframe(
-            critici[['data','Giorno','fatturato','poke_totali','pct_ingredienti','pct_dipendenti','utile_lordo','Motivo']].round(1).rename(columns={
+            _disp.rename(columns={
                 'data': 'Data', 'fatturato': 'Fatturato (€)', 'poke_totali': 'Poke',
                 'pct_ingredienti': '% Ing', 'pct_dipendenti': '% Dip',
                 'utile_lordo': 'Utile lordo (€)',
             }),
-            hide_index=True, use_container_width=True
+            hide_index=True, width="stretch"
         )
         st.caption("🧂 % ingredienti alta = rifornimento pesante o giornata lenta  ·  👥 % dipendente alta = giornata poco intensa  ·  📉 fatturato basso = apertura sottosoglia")
 
